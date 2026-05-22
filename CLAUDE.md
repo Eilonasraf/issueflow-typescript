@@ -44,7 +44,9 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Tickets** slice done (basic CRUD) — `TicketsModule` (controller + service + `create-ticket`/`update-ticket` DTOs) wired into `AppModule`, implementing the README Tickets API (`GET /tickets?projectId=`, GET by id, POST, PATCH, DELETE). The `Ticket` entity gained `dueDate` (nullable timestamptz), `isOverdue` (bool default false), and `deletedAt` (`@DeleteDateColumn` + `@Exclude`). DELETE is soft delete (`softRemove`); GET hides soft-deleted rows; `dueDate`/`isOverdue` are visible in responses, `deletedAt` is not. `create` validates `projectId` exists and `assigneeId` if provided. **No state-machine enforcement yet** — status updates accept any valid enum; the forward-only lifecycle (no edits when DONE, no DONE with unresolved blockers) is the next step.
 
-No auth yet. `comments/` and `audit-logs/` still have only entities. ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`) not built (need auth). Next: ticket state machine.
+**Ticket state machine** enforced (Step 6) — `TicketStateService` (`src/tickets/ticket-state.service.ts`), consulted by `TicketsService.update`: strict single-step forward transitions only (`TODO→IN_PROGRESS→IN_REVIEW→DONE`; forward jumps and backward moves → 400), no edits once a ticket is `DONE` (any update → 400), and `→DONE` blocked when any `TicketDependency.blockedBy` ticket isn't `DONE` (400). Dependency rows are read-only here — there's still no API to *create* them. Lifecycle applies to updates only; `POST /tickets` may still create a ticket in any status.
+
+No auth yet. `comments/` and `audit-logs/` still have only entities. Dependency-creation endpoints and ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`) not built. 
 
 ## Deliverables (still missing)
 

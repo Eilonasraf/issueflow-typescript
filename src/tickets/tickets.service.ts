@@ -8,8 +8,10 @@ import { Repository } from 'typeorm';
 import { Ticket } from './ticket.entity';
 import { Project } from '../projects/project.entity';
 import { User } from '../users/user.entity';
+import { TicketStatus } from '../common/enums/ticket-status.enum';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
+import { TicketStateService } from './ticket-state.service';
 
 @Injectable()
 export class TicketsService {
@@ -20,6 +22,7 @@ export class TicketsService {
     private readonly projectRepo: Repository<Project>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly stateService: TicketStateService,
   ) {}
 
   findByProject(projectId: number): Promise<Ticket[]> {
@@ -49,8 +52,15 @@ export class TicketsService {
 
   async update(id: number, dto: UpdateTicketDto): Promise<Ticket> {
     const ticket = await this.findOne(id);
+    this.stateService.assertCanUpdate(ticket);
     if (dto.assigneeId != null) {
       await this.assertAssigneeExists(dto.assigneeId);
+    }
+    if (dto.status != null && dto.status !== ticket.status) {
+      this.stateService.assertValidTransition(ticket.status, dto.status);
+      if (dto.status === TicketStatus.DONE) {
+        await this.stateService.assertNoOpenBlockers(id);
+      }
     }
     Object.assign(ticket, dto);
     return this.ticketRepo.save(ticket);

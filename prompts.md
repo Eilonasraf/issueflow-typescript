@@ -171,3 +171,21 @@ Projects was the right next slice because it depends only on users and is itself
 
 **Reasoning:**
 Keeping CRUD separate from the lifecycle rules made the slice easy to verify on its own. The state machine (forward-only transitions, no edits when DONE, no DONE with unresolved blockers) is intentionally deferred to the next step so the basic create/read/update/delete route is proven first.
+
+## Ticket State Machine
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Add the ticket lifecycle business rules on top of the CRUD slice, isolated in a dedicated service.
+
+**Prompt:**
+> Implement the ticket state-machine rules only. Add a TicketStateService and wire it into TicketsModule; update only TicketsService.update to use it. Enforce strict single-step forward transitions (TODO -> IN_PROGRESS -> IN_REVIEW -> DONE), reject backward transitions and forward jumps, reject any update once a ticket is DONE, and reject moving to DONE when unresolved blockers exist (read existing TicketDependency rows; do not add dependency endpoints). Do not add audit logs, auth, comments, auto-assignment, CSV, attachments, or scheduler.
+
+**Outcome:**
+- Added `TicketStateService` with a strict forward-transition map and three guards: `assertCanUpdate` (DONE is locked), `assertValidTransition` (single-step only), and `assertNoOpenBlockers` (checks `blockedBy` ticket statuses).
+- Wired the service into `TicketsModule` and called it from `TicketsService.update`; CRUD methods otherwise unchanged.
+- Verified every transition case (forward 200; backward, forward-jump, and update-when-DONE 400) and the blocker gate (DONE blocked while a blocker is open, allowed once it is DONE) via curl, inserting a dependency row directly in the DB since the dependency endpoints are not built yet.
+
+**Reasoning:**
+Putting the lifecycle rules in their own service keeps `TicketsService` focused on persistence and makes the rules independently testable. Using strict single-step transitions (not arbitrary forward jumps) matches the assignment's lifecycle and makes invalid jumps like TODO -> DONE fail explicitly.
