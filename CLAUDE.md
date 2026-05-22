@@ -56,7 +56,9 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Audit logging** (Step 10) — `AuditLogsModule` (`src/audit-logs/`): `AuditLogsService.record(...)` + `GET /audit-logs` with optional `entityType`/`entityId`/`action`/`actor` filters (JWT-protected, no role gate). Every state-changing service method takes an explicit `actorId` (threaded from controllers via `@CurrentUser().sub`) and writes an audit row after the mutation succeeds — Users/Projects/Tickets/Comments CREATE/UPDATE/DELETE, and dependency add/remove as `UPDATE`/`TICKET` (entityId = ticketId). Public `POST /users` logs CREATE/USER with `performedBy: null`. `AuditLogsService` is a normal singleton; `SYSTEM`/`AUTO_ASSIGN` reserved for auto-assignment later.
 
-Mentions, ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`), auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
+**Soft-delete admin endpoints** (Step 11) — ADMIN-only: `GET /projects/deleted`, `POST /projects/:id/restore`, `GET /tickets/deleted?projectId=`, `POST /tickets/:id/restore`. Enforced by a reusable `@Roles(UserRole.ADMIN)` decorator + `RolesGuard` (`src/auth/`), applied per-route via `@UseGuards(RolesGuard)` (the global `JwtAuthGuard` runs first and sets `req.user`; non-ADMIN → 403). **Not** global and no role checks on normal CRUD. `findDeleted` uses `withDeleted: true` + `deletedAt: Not(IsNull())`; `restore` 404s on unknown/not-deleted ids, calls `repo.restore()` (clears `deleted_at`), and audits `RESTORE`. The `/deleted` routes are declared before the `/:id` routes so they aren't parsed as ids.
+
+Mentions, auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
 
 ## Deliverables (still missing)
 

@@ -265,3 +265,22 @@ A global guard plus a small `@Public()` allow-list means "protect everything" is
 
 **Reasoning:**
 Explicit `actorId` threading keeps the audit trail transparent and debuggable (clear who did what), avoids request-scoped DI, and leaves services usable from non-HTTP contexts (e.g. future system jobs that will log with `actor: SYSTEM`, `performedBy: null`). Writing the record after the mutation ensures only successful state changes are logged.
+
+## Soft-Delete Admin Endpoints
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Complete the soft-delete feature with ADMIN-only list/restore endpoints, now that auth and audit exist.
+
+**Prompt:**
+> Implement the soft-delete admin endpoints only. Add GET /projects/deleted, POST /projects/:id/restore, GET /tickets/deleted?projectId=, POST /tickets/:id/restore. Make them ADMIN-only using a reusable @Roles decorator + RolesGuard that reads req.user.role from the JWT (non-admin -> 403); apply it only to these 4 routes, not globally, and don't add role checks to normal CRUD. Restore should clear deletedAt and be audited as RESTORE. Do not add mentions/attachments/CSV/scheduler/auto-assignment.
+
+**Outcome:**
+- Added `@Roles(...UserRole[])` decorator and `RolesGuard` in `src/auth/`, applied per-route via `@UseGuards(RolesGuard)` on the 4 admin endpoints.
+- Added `findDeleted` (using `withDeleted` + `deletedAt IS NOT NULL`) and `restore` (clears `deleted_at`, audits `RESTORE`) to the projects and tickets services; restoring an unknown/not-deleted id returns 404.
+- Declared the `/deleted` routes before the `/:id` routes to avoid `deleted` being parsed as an id.
+- Verified: no token 401, DEVELOPER 403, ADMIN 200; restore clears `deleted_at` and the records reappear in normal GETs; deleted lists no longer show them; two RESTORE audit rows with the admin's `performedBy`.
+
+**Reasoning:**
+A reusable guard + decorator keeps role enforcement declarative and ready for any future ADMIN route, while staying scoped to just these endpoints (no blanket role gating). Reusing TypeORM's `restore()`/`withDeleted` keeps the soft-delete lifecycle consistent with how `softRemove` was implemented earlier.

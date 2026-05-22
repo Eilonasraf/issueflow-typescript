@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Project } from './project.entity';
 import { User } from '../users/user.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -75,6 +75,31 @@ export class ProjectsService {
     await this.projectRepo.softRemove(project);
     await this.auditLogs.record({
       action: AuditAction.DELETE,
+      entityType: AuditEntityType.PROJECT,
+      entityId: id,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
+  }
+
+  findDeleted(): Promise<Project[]> {
+    return this.projectRepo.find({
+      withDeleted: true,
+      where: { deletedAt: Not(IsNull()) },
+    });
+  }
+
+  async restore(id: number, actorId: number): Promise<void> {
+    const project = await this.projectRepo.findOne({
+      withDeleted: true,
+      where: { id },
+    });
+    if (!project || !project.deletedAt) {
+      throw new NotFoundException(`Deleted project ${id} not found`);
+    }
+    await this.projectRepo.restore(id);
+    await this.auditLogs.record({
+      action: AuditAction.RESTORE,
       entityType: AuditEntityType.PROJECT,
       entityId: id,
       performedBy: actorId,

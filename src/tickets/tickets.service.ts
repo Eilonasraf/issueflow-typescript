@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Ticket } from './ticket.entity';
 import { Project } from '../projects/project.entity';
 import { User } from '../users/user.entity';
@@ -96,6 +96,31 @@ export class TicketsService {
     await this.ticketRepo.softRemove(ticket);
     await this.auditLogs.record({
       action: AuditAction.DELETE,
+      entityType: AuditEntityType.TICKET,
+      entityId: id,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
+  }
+
+  findDeleted(projectId: number): Promise<Ticket[]> {
+    return this.ticketRepo.find({
+      withDeleted: true,
+      where: { projectId, deletedAt: Not(IsNull()) },
+    });
+  }
+
+  async restore(id: number, actorId: number): Promise<void> {
+    const ticket = await this.ticketRepo.findOne({
+      withDeleted: true,
+      where: { id },
+    });
+    if (!ticket || !ticket.deletedAt) {
+      throw new NotFoundException(`Deleted ticket ${id} not found`);
+    }
+    await this.ticketRepo.restore(id);
+    await this.auditLogs.record({
+      action: AuditAction.RESTORE,
       entityType: AuditEntityType.TICKET,
       entityId: id,
       performedBy: actorId,
