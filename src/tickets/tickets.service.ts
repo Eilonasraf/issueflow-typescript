@@ -12,6 +12,10 @@ import { TicketStatus } from '../common/enums/ticket-status.enum';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { TicketStateService } from './ticket-state.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction } from '../common/enums/audit-action.enum';
+import { AuditActor } from '../common/enums/audit-actor.enum';
+import { AuditEntityType } from '../common/enums/audit-entity-type.enum';
 
 @Injectable()
 export class TicketsService {
@@ -23,6 +27,7 @@ export class TicketsService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly stateService: TicketStateService,
+    private readonly auditLogs: AuditLogsService,
   ) {}
 
   findByProject(projectId: number): Promise<Ticket[]> {
@@ -37,7 +42,7 @@ export class TicketsService {
     return ticket;
   }
 
-  async create(dto: CreateTicketDto): Promise<Ticket> {
+  async create(dto: CreateTicketDto, actorId: number): Promise<Ticket> {
     const project = await this.projectRepo.findOne({
       where: { id: dto.projectId },
     });
@@ -47,10 +52,22 @@ export class TicketsService {
     if (dto.assigneeId != null) {
       await this.assertAssigneeExists(dto.assigneeId);
     }
-    return this.ticketRepo.save(this.ticketRepo.create(dto));
+    const ticket = await this.ticketRepo.save(this.ticketRepo.create(dto));
+    await this.auditLogs.record({
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.TICKET,
+      entityId: ticket.id,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
+    return ticket;
   }
 
-  async update(id: number, dto: UpdateTicketDto): Promise<Ticket> {
+  async update(
+    id: number,
+    dto: UpdateTicketDto,
+    actorId: number,
+  ): Promise<Ticket> {
     const ticket = await this.findOne(id);
     this.stateService.assertCanUpdate(ticket);
     if (dto.assigneeId != null) {
@@ -63,12 +80,27 @@ export class TicketsService {
       }
     }
     Object.assign(ticket, dto);
-    return this.ticketRepo.save(ticket);
+    const saved = await this.ticketRepo.save(ticket);
+    await this.auditLogs.record({
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.TICKET,
+      entityId: id,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
+    return saved;
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, actorId: number): Promise<void> {
     const ticket = await this.findOne(id);
     await this.ticketRepo.softRemove(ticket);
+    await this.auditLogs.record({
+      action: AuditAction.DELETE,
+      entityType: AuditEntityType.TICKET,
+      entityId: id,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
   }
 
   private async assertAssigneeExists(assigneeId: number): Promise<void> {

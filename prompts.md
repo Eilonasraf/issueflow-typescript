@@ -247,3 +247,21 @@ Keeping the comment response shape aligned with the README now (including a stub
 
 **Reasoning:**
 A global guard plus a small `@Public()` allow-list means "protect everything" is enforced in one place rather than per-route, and keeping `POST /users` public solves the bootstrap chicken-and-egg (no user = no token = no way to create a user). Using Node `crypto` for hashing avoids a native dependency, and isolating it in `PasswordService` lets both user-create and login share one implementation.
+
+## Audit Logging
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Record every state-changing action with the real authenticated user, now that JWT auth exists.
+
+**Prompt:**
+> Implement audit logging only. Add AuditLogsService, AuditLogsController (GET /audit-logs with entityType/entityId/action/actor filters), and an AuditLogQueryDto. Thread actorId explicitly: controllers read @CurrentUser().sub and pass it into state-changing service methods, which write an audit record after the mutation succeeds. Keep AuditLogsService singleton. Public POST /users logs CREATE/USER with performedBy null. Dependency add/remove logs UPDATE/TICKET with entityId = ticketId. Read-only methods do not log. No role authorization, restore endpoints, mentions, attachments, CSV, scheduler, or auto-assignment yet.
+
+**Outcome:**
+- Added `AuditLogsModule`/`Service`/`Controller` + query DTO; `GET /audit-logs` is JWT-protected and supports the four filters; rows are returned newest-first.
+- Threaded `actorId` through every mutating method in Users, Projects, Tickets, Comments, and Ticket Dependencies; each writes an audit row after success. Read methods are untouched.
+- Verified: `/audit-logs` 401 without a token; CREATE/USER logs `performedBy: null` for public registration; CREATE/PROJECT, CREATE/TICKET, UPDATE/TICKET (incl. status change and dependency add/remove), CREATE/COMMENT, and the DELETE rows all carry the real `performedBy`; filters by `entityType`, `entityId`, `action`, and `actor` narrow correctly; DB cross-check confirms persistence.
+
+**Reasoning:**
+Explicit `actorId` threading keeps the audit trail transparent and debuggable (clear who did what), avoids request-scoped DI, and leaves services usable from non-HTTP contexts (e.g. future system jobs that will log with `actor: SYSTEM`, `performedBy: null`). Writing the record after the mutation ensures only successful state changes are logged.

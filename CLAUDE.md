@@ -54,7 +54,9 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Auth flow:** `POST /users` (with `password`) → `POST /auth/login` → send `Authorization: Bearer <token>` on all other endpoints. Existing pre-Step-9 users have null `passwordHash` and cannot log in.
 
-`audit-logs/` still has only its entity. Mentions, ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`), auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
+**Audit logging** (Step 10) — `AuditLogsModule` (`src/audit-logs/`): `AuditLogsService.record(...)` + `GET /audit-logs` with optional `entityType`/`entityId`/`action`/`actor` filters (JWT-protected, no role gate). Every state-changing service method takes an explicit `actorId` (threaded from controllers via `@CurrentUser().sub`) and writes an audit row after the mutation succeeds — Users/Projects/Tickets/Comments CREATE/UPDATE/DELETE, and dependency add/remove as `UPDATE`/`TICKET` (entityId = ticketId). Public `POST /users` logs CREATE/USER with `performedBy: null`. `AuditLogsService` is a normal singleton; `SYSTEM`/`AUTO_ASSIGN` reserved for auto-assignment later.
+
+Mentions, ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`), auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
 
 ## Deliverables (still missing)
 

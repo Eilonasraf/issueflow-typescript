@@ -9,6 +9,10 @@ import { Repository } from 'typeorm';
 import { Ticket } from './ticket.entity';
 import { TicketDependency } from './ticket-dependency.entity';
 import { TicketStatus } from '../common/enums/ticket-status.enum';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction } from '../common/enums/audit-action.enum';
+import { AuditActor } from '../common/enums/audit-actor.enum';
+import { AuditEntityType } from '../common/enums/audit-entity-type.enum';
 
 export interface BlockerView {
   id: number;
@@ -23,9 +27,14 @@ export class TicketDependenciesService {
     private readonly depRepo: Repository<TicketDependency>,
     @InjectRepository(Ticket)
     private readonly ticketRepo: Repository<Ticket>,
+    private readonly auditLogs: AuditLogsService,
   ) {}
 
-  async addDependency(ticketId: number, blockedById: number): Promise<void> {
+  async addDependency(
+    ticketId: number,
+    blockedById: number,
+    actorId: number,
+  ): Promise<void> {
     if (ticketId === blockedById) {
       throw new BadRequestException('A ticket cannot depend on itself');
     }
@@ -48,6 +57,13 @@ export class TicketDependenciesService {
       throw new ConflictException('Dependency already exists');
     }
     await this.depRepo.save(this.depRepo.create({ ticketId, blockedById }));
+    await this.auditLogs.record({
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.TICKET,
+      entityId: ticketId,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
   }
 
   async listDependencies(ticketId: number): Promise<BlockerView[]> {
@@ -65,7 +81,11 @@ export class TicketDependenciesService {
       }));
   }
 
-  async removeDependency(ticketId: number, blockerId: number): Promise<void> {
+  async removeDependency(
+    ticketId: number,
+    blockerId: number,
+    actorId: number,
+  ): Promise<void> {
     await this.getTicketOr404(ticketId);
     const dep = await this.depRepo.findOne({
       where: { ticketId, blockedById: blockerId },
@@ -74,6 +94,13 @@ export class TicketDependenciesService {
       throw new NotFoundException('Dependency not found');
     }
     await this.depRepo.remove(dep);
+    await this.auditLogs.record({
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.TICKET,
+      entityId: ticketId,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
   }
 
   private async getTicketOr404(id: number): Promise<Ticket> {

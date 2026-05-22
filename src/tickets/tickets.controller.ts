@@ -16,6 +16,7 @@ import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket } from './ticket.entity';
+import { CurrentUser, JwtUser } from '../auth/current-user.decorator';
 
 @Controller('tickets')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -36,8 +37,11 @@ export class TicketsController {
 
   @Post()
   @HttpCode(200)
-  create(@Body() dto: CreateTicketDto): Promise<Ticket> {
-    return this.ticketsService.create(dto);
+  create(
+    @Body() dto: CreateTicketDto,
+    @CurrentUser() user: JwtUser,
+  ): Promise<Ticket> {
+    return this.ticketsService.create(dto, user.sub);
   }
 
   @Patch(':ticketId')
@@ -45,15 +49,17 @@ export class TicketsController {
   async update(
     @Param('ticketId', ParseIntPipe) ticketId: number,
     @Body() dto: UpdateTicketDto,
+    @CurrentUser() user: JwtUser,
   ): Promise<void> {
-    await this.ticketsService.update(ticketId, dto);
+    await this.ticketsService.update(ticketId, dto, user.sub);
   }
 
   @Delete(':ticketId')
   @HttpCode(200)
   async remove(
     @Param('ticketId', ParseIntPipe) ticketId: number,
+    @CurrentUser() user: JwtUser,
   ): Promise<void> {
-    await this.ticketsService.remove(ticketId);
+    await this.ticketsService.remove(ticketId, user.sub);
   }
 }

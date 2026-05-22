@@ -13,6 +13,7 @@ import {
   TicketDependenciesService,
 } from './ticket-dependencies.service';
 import { CreateDependencyDto } from './dto/create-dependency.dto';
+import { CurrentUser, JwtUser } from '../auth/current-user.decorator';
 
 @Controller('tickets/:ticketId/dependencies')
 export class TicketDependenciesController {
@@ -23,8 +24,9 @@ export class TicketDependenciesController {
   async add(
     @Param('ticketId', ParseIntPipe) ticketId: number,
     @Body() dto: CreateDependencyDto,
+    @CurrentUser() user: JwtUser,
   ): Promise<void> {
-    await this.service.addDependency(ticketId, dto.blockedBy);
+    await this.service.addDependency(ticketId, dto.blockedBy, user.sub);
   }
 
   @Get()
@@ -39,7 +41,8 @@ export class TicketDependenciesController {
   async remove(
     @Param('ticketId', ParseIntPipe) ticketId: number,
     @Param('blockerId', ParseIntPipe) blockerId: number,
+    @CurrentUser() user: JwtUser,
   ): Promise<void> {
-    await this.service.removeDependency(ticketId, blockerId);
+    await this.service.removeDependency(ticketId, blockerId, user.sub);
   }
 }

@@ -15,6 +15,7 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { Project } from './project.entity';
+import { CurrentUser, JwtUser } from '../auth/current-user.decorator';
 
 @Controller('projects')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -35,8 +36,11 @@ export class ProjectsController {
 
   @Post()
   @HttpCode(200)
-  create(@Body() dto: CreateProjectDto): Promise<Project> {
-    return this.projectsService.create(dto);
+  create(
+    @Body() dto: CreateProjectDto,
+    @CurrentUser() user: JwtUser,
+  ): Promise<Project> {
+    return this.projectsService.create(dto, user.sub);
   }
 
   @Patch(':projectId')
@@ -44,15 +48,17 @@ export class ProjectsController {
   async update(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Body() dto: UpdateProjectDto,
+    @CurrentUser() user: JwtUser,
   ): Promise<void> {
-    await this.projectsService.update(projectId, dto);
+    await this.projectsService.update(projectId, dto, user.sub);
   }
 
   @Delete(':projectId')
   @HttpCode(200)
   async remove(
     @Param('projectId', ParseIntPipe) projectId: number,
+    @CurrentUser() user: JwtUser,
   ): Promise<void> {
-    await this.projectsService.remove(projectId);
+    await this.projectsService.remove(projectId, user.sub);
   }
 }

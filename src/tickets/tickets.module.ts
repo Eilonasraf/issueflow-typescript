@@ -9,10 +9,12 @@ import { TicketStateService } from './ticket-state.service';
 import { TicketDependenciesService } from './ticket-dependencies.service';
 import { TicketsController } from './tickets.controller';
 import { TicketDependenciesController } from './ticket-dependencies.controller';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Ticket, Project, User, TicketDependency]),
+    AuditLogsModule,
   ],
   controllers: [TicketsController, TicketDependenciesController],
   providers: [TicketsService, TicketStateService, TicketDependenciesService],

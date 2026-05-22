@@ -15,6 +15,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
 import { Public } from '../auth/public.decorator';
+import { CurrentUser, JwtUser } from '../auth/current-user.decorator';
 
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -35,7 +36,7 @@ export class UsersController {
   @Post()
   @HttpCode(200)
   create(@Body() dto: CreateUserDto): Promise<User> {
-    return this.usersService.create(dto);
+    return this.usersService.create(dto, null);
   }
 
   @Post('update/:userId')
@@ -43,13 +44,17 @@ export class UsersController {
   async update(
     @Param('userId', ParseIntPipe) userId: number,
     @Body() dto: UpdateUserDto,
+    @CurrentUser() user: JwtUser,
   ): Promise<void> {
-    await this.usersService.update(userId, dto);
+    await this.usersService.update(userId, dto, user.sub);
   }
 
   @Delete(':userId')
   @HttpCode(200)
-  async remove(@Param('userId', ParseIntPipe) userId: number): Promise<void> {
-    await this.usersService.remove(userId);
+  async remove(
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser() user: JwtUser,
+  ): Promise<void> {
+    await this.usersService.remove(userId, user.sub);
   }
 }

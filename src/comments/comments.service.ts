@@ -10,6 +10,10 @@ import { Ticket } from '../tickets/ticket.entity';
 import { User } from '../users/user.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { AuditAction } from '../common/enums/audit-action.enum';
+import { AuditActor } from '../common/enums/audit-actor.enum';
+import { AuditEntityType } from '../common/enums/audit-entity-type.enum';
 
 export interface CommentView {
   id: number;
@@ -28,6 +32,7 @@ export class CommentsService {
     private readonly ticketRepo: Repository<Ticket>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly auditLogs: AuditLogsService,
   ) {}
 
   async findByTicket(ticketId: number): Promise<CommentView[]> {
@@ -39,7 +44,11 @@ export class CommentsService {
     return comments.map((comment) => this.toView(comment));
   }
 
-  async create(ticketId: number, dto: CreateCommentDto): Promise<CommentView> {
+  async create(
+    ticketId: number,
+    dto: CreateCommentDto,
+    actorId: number,
+  ): Promise<CommentView> {
     await this.getTicketOr404(ticketId);
     const author = await this.userRepo.findOne({ where: { id: dto.authorId } });
     if (!author) {
@@ -52,6 +61,13 @@ export class CommentsService {
         content: dto.content,
       }),
     );
+    await this.auditLogs.record({
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.COMMENT,
+      entityId: saved.id,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
     return this.toView(saved);
   }
 
@@ -59,15 +75,34 @@ export class CommentsService {
     ticketId: number,
     commentId: number,
     dto: UpdateCommentDto,
+    actorId: number,
   ): Promise<void> {
     const comment = await this.getCommentOr404(ticketId, commentId);
     comment.content = dto.content;
     await this.commentRepo.save(comment);
+    await this.auditLogs.record({
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.COMMENT,
+      entityId: commentId,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
   }
 
-  async remove(ticketId: number, commentId: number): Promise<void> {
+  async remove(
+    ticketId: number,
+    commentId: number,
+    actorId: number,
+  ): Promise<void> {
     const comment = await this.getCommentOr404(ticketId, commentId);
     await this.commentRepo.remove(comment);
+    await this.auditLogs.record({
+      action: AuditAction.DELETE,
+      entityType: AuditEntityType.COMMENT,
+      entityId: commentId,
+      performedBy: actorId,
+      actor: AuditActor.USER,
+    });
   }
 
   private toView(comment: Comment): CommentView {
