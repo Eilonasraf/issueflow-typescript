@@ -208,3 +208,22 @@ Putting the lifecycle rules in their own service keeps `TicketsService` focused 
 
 **Reasoning:**
 This completed the dependency feature so the Step 6 blocker rule is driven by real API data rather than hand-inserted rows, which makes the lifecycle behavior verifiable end-to-end.
+
+## Comments API
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Implement the comments API as a vertical slice, deferring mention parsing to a later step.
+
+**Prompt:**
+> Implement the comments API only. Add a CommentsModule, service, controller, and create/update DTOs, and register the module. Implement GET/POST/PATCH/DELETE under /tickets/:ticketId/comments. Validate the ticket exists and the authorId user exists. Do not implement mentions, audit, auth, or concurrency yet. For now return mentionedUsers as an empty array, but mark clearly that real @username parsing and persistence will be implemented in the mentions slice.
+
+**Outcome:**
+- Added `CommentsModule`, `CommentsService`, `CommentsController`, and create/update DTOs, wired into `AppModule`.
+- Implemented list/create/update/delete with validations: ticket missing -> 404, unknown author -> 400, comment not on the ticket -> 404, empty content -> 400.
+- Mapped responses to `{ id, ticketId, authorId, content, mentionedUsers }` with `mentionedUsers: []` and a `// TODO(mentions slice)` marker; `createdAt`/`updatedAt` are kept on the entity but excluded from responses.
+- Verified the full CRUD flow and negative cases with curl.
+
+**Reasoning:**
+Keeping the comment response shape aligned with the README now (including a stubbed `mentionedUsers: []`) means the later mentions slice only has to populate that array, with no contract change. Mentions are a distinct feature (parsing, persistence, a lookup endpoint), so isolating them keeps this slice small and verifiable.

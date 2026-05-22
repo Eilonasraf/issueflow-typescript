@@ -48,7 +48,9 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Ticket dependencies API** (Step 7) — `TicketDependenciesController` (`tickets/:ticketId/dependencies`) + `TicketDependenciesService`, registered in `TicketsModule`. `POST` (`{blockedBy}`), `GET` (returns blocker tickets as `{id, title, status}`), `DELETE :blockerId`. Validates both tickets exist (path ticket 404, bad `blockedBy` 400), same project (400), no duplicate (409), and no self-dependency (400). The Step 6 blocker rule is now exercisable through the API (no manual SQL). No transitive cycle detection (only direct self-block).
 
-No auth yet. `comments/` and `audit-logs/` still have only entities. ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`) not built. 
+**Comments API** (Step 8) — `CommentsController` (`tickets/:ticketId/comments`) + `CommentsService`, registered in `AppModule`. `GET` list, `POST` (`{authorId, content}`), `PATCH :commentId` (`{content}`), `DELETE :commentId`. Validates ticket exists (404), author exists (400), and comment belongs to the ticket for patch/delete (404). Hard delete (no soft delete for comments). The service maps to a `CommentView` returning `{id, ticketId, authorId, content, mentionedUsers}` — `mentionedUsers` is stubbed `[]` with a TODO; real `@username` parsing/persistence is the future mentions slice. `createdAt`/`updatedAt` stay on the entity but are excluded from responses.
+
+No auth yet. `audit-logs/` still has only its entity. Mentions, ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`), auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
 
 ## Deliverables (still missing)
 
