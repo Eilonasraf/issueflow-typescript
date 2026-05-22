@@ -50,7 +50,11 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Comments API** (Step 8) — `CommentsController` (`tickets/:ticketId/comments`) + `CommentsService`, registered in `AppModule`. `GET` list, `POST` (`{authorId, content}`), `PATCH :commentId` (`{content}`), `DELETE :commentId`. Validates ticket exists (404), author exists (400), and comment belongs to the ticket for patch/delete (404). Hard delete (no soft delete for comments). The service maps to a `CommentView` returning `{id, ticketId, authorId, content, mentionedUsers}` — `mentionedUsers` is stubbed `[]` with a TODO; real `@username` parsing/persistence is the future mentions slice. `createdAt`/`updatedAt` stay on the entity but are excluded from responses.
 
-No auth yet. `audit-logs/` still has only its entity. Mentions, ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`), auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
+**Auth / JWT** (Step 9) — `AuthModule` (`src/auth/`): `POST /auth/login` → `{accessToken, tokenType:"Bearer", expiresIn:3600}`, `POST /auth/logout` (in-memory `TokenDenylistService`), `GET /auth/me`. A global `JwtAuthGuard` (`APP_GUARD`) protects every route except those marked `@Public()` — currently `POST /auth/login` and `POST /users` (registration/bootstrap). Passwords are hashed with Node `crypto.scrypt` in `PasswordService` (no bcrypt); `User.passwordHash` is nullable + `@Exclude`, so it never appears in responses (users controllers + `/auth/me` use `ClassSerializerInterceptor`). `password` is required on `POST /users`. JWT secret is **hardcoded (`dev-secret-change-me`) — local dev only**; move to env for real use. Only new dep: `@nestjs/jwt`. No role-based authorization yet (any valid token passes).
+
+**Auth flow:** `POST /users` (with `password`) → `POST /auth/login` → send `Authorization: Bearer <token>` on all other endpoints. Existing pre-Step-9 users have null `passwordHash` and cannot log in.
+
+`audit-logs/` still has only its entity. Mentions, ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`), auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
 
 ## Deliverables (still missing)
 

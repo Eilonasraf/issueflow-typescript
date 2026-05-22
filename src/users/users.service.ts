@@ -8,12 +8,14 @@ import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PasswordService } from '../auth/password.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly repo: Repository<User>,
+    private readonly passwordService: PasswordService,
   ) {}
 
   findAll(): Promise<User[]> {
@@ -35,7 +37,14 @@ export class UsersService {
     if (await this.repo.findOne({ where: { email: dto.email } })) {
       throw new ConflictException('Email already exists');
     }
-    return this.repo.save(this.repo.create(dto));
+    const user = this.repo.create({
+      username: dto.username,
+      email: dto.email,
+      fullName: dto.fullName,
+      role: dto.role,
+      passwordHash: this.passwordService.hash(dto.password),
+    });
+    return this.repo.save(user);
   }
 
   async update(id: number, dto: UpdateUserDto): Promise<User> {

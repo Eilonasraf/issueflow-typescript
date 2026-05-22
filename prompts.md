@@ -227,3 +227,23 @@ This completed the dependency feature so the Step 6 blocker rule is driven by re
 
 **Reasoning:**
 Keeping the comment response shape aligned with the README now (including a stubbed `mentionedUsers: []`) means the later mentions slice only has to populate that array, with no contract change. Mentions are a distinct feature (parsing, persistence, a lookup endpoint), so isolating them keeps this slice small and verifiable.
+
+## Auth / JWT
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Add JWT authentication and protect the API, including the password field the User entity was missing.
+
+**Prompt:**
+> Implement Auth/JWT only. Add login/logout/me and a global JWT guard. Hash passwords with Node's crypto scrypt in a reusable PasswordService (no bcrypt/bcryptjs, no passport; only add @nestjs/jwt if needed). Add passwordHash to the User entity and a password field to CreateUserDto, hash it on create, and never return passwordHash. Use a global guard with @Public() on POST /auth/login and POST /users (bootstrap); protect everything else. In-memory token deny-list for logout. No role authorization yet. Document the create -> login -> Bearer flow in run.md, and note the hardcoded JWT secret is local-dev only.
+
+**Outcome:**
+- Added `AuthModule` (`auth.service`, `auth.controller`, `jwt-auth.guard`, `password.service`, `token-denylist.service`, `@Public()` and `@CurrentUser()` decorators, `LoginDto`); only new dependency is `@nestjs/jwt`.
+- Added nullable `passwordHash` (`@Exclude`) to `User` and a required `password` to `CreateUserDto`; passwords hashed with scrypt and excluded from all responses via `ClassSerializerInterceptor`.
+- Global `JwtAuthGuard` (`APP_GUARD`) protects every route except `POST /auth/login` and `POST /users`.
+- Verified: protected routes 401 without a token and 200 with one; login returns `{accessToken, tokenType:"Bearer", expiresIn:3600}`; `/auth/me` returns the profile without `passwordHash`; wrong password 401; logout revokes the token (subsequent use 401); DB stores a scrypt `salt:hash`, not plaintext.
+- Filled in `run.md` with the setup/build/run steps and the auth flow; flagged the hardcoded secret as local-dev only.
+
+**Reasoning:**
+A global guard plus a small `@Public()` allow-list means "protect everything" is enforced in one place rather than per-route, and keeping `POST /users` public solves the bootstrap chicken-and-egg (no user = no token = no way to create a user). Using Node `crypto` for hashing avoids a native dependency, and isolating it in `PasswordService` lets both user-create and login share one implementation.

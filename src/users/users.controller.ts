@@ -1,5 +1,6 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Delete,
   Get,
@@ -7,13 +8,16 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
+import { Public } from '../auth/public.decorator';
 
 @Controller('users')
+@UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -27,6 +31,7 @@ export class UsersController {
     return this.usersService.findOne(userId);
   }
 
+  @Public()
   @Post()
   @HttpCode(200)
   create(@Body() dto: CreateUserDto): Promise<User> {
