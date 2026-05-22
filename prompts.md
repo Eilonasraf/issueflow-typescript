@@ -131,3 +131,23 @@ This completed the main database layer while avoiding unnecessary scope expansio
 
 **Reasoning:**
 This was the first vertical API slice after completing the database layer, proving the full request-to-response path (controller → service → TypeORM repository → PostgreSQL) works before expanding to other API groups.
+
+## Projects API Vertical Slice
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Implement the README Projects API as the second vertical slice, including the required soft-delete behavior.
+
+**Prompt:**
+> Implement the Projects vertical slice only. Add the projects module, service, controller, and DTOs. Implement the README Projects endpoints (GET all, GET by id, POST, PATCH, DELETE). Use TypeORM soft delete for DELETE via a deleted_at column — do not hard-remove the row — and make sure GET endpoints exclude soft-deleted projects. Validate that ownerId references an existing user. Do not add /projects/deleted or restore endpoints, and do not add tickets, auth, audit logs, workload, attachments, or scheduler yet.
+
+**Outcome:**
+- Added Projects module, controller, service, and create/update DTOs.
+- Added a `deleted_at` soft-delete column to the Project entity and implemented DELETE as a soft delete (`softRemove`); GET endpoints exclude soft-deleted rows.
+- Validated `ownerId` against existing users, returning a clear 400 for an unknown owner.
+- Hid `deletedAt` from API responses with `@Exclude` + `ClassSerializerInterceptor`.
+- Verified the positive flow, negative cases (400/404), and confirmed in the DB that a deleted project is retained with `deleted_at` set while being hidden from the API.
+
+**Reasoning:**
+Projects was the right next slice because it depends only on users and is itself a dependency for tickets. It also introduced the soft-delete pattern the assignment requires for projects and tickets, in an isolated, verifiable way.

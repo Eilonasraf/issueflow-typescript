@@ -40,7 +40,9 @@ DB layer complete: entities `User`, `Project`, `Ticket`, `Comment`, `AuditLog`, 
 
 First HTTP slice done — **Users**: `UsersModule` (controller + service + `create-user`/`update-user` DTOs) wired into `AppModule`, implementing the README Users API (GET list/by-id, POST create, POST `update/:userId`, DELETE). A global `ValidationPipe` (`whitelist: true, transform: true`) is set in `main.ts`. Controllers use `@HttpCode(200)` on POST/DELETE and `ParseIntPipe` on id params; service throws `ConflictException` on duplicate username/email and `NotFoundException` for missing users (hard delete — soft delete is only for tickets/projects).
 
-No auth yet. Other domains (`projects/`, `tickets/`, `comments/`, `audit-logs/`) still have only entities. Next group: Auth or Projects vertical slice.
+**Projects** slice done — `ProjectsModule` (controller + service + `create-project`/`update-project` DTOs) wired into `AppModule`, implementing the README Projects API (GET list/by-id, POST create, PATCH `:projectId`, DELETE `:projectId`). DELETE is **soft delete**: `Project` has `@DeleteDateColumn deletedAt` (marked `@Exclude`), `remove` uses `softRemove`, and the controller uses `ClassSerializerInterceptor` so `deletedAt` never appears in responses. `create` validates `ownerId` references an existing user (400 otherwise). Soft-deleted projects are hidden from GET but retained in the DB.
+
+No auth yet. Other domains (`tickets/`, `comments/`, `audit-logs/`) still have only entities. The ADMIN-only `/projects/deleted` and `/projects/:id/restore` endpoints are not built (need auth). Next group: Tickets.
 
 ## Deliverables (still missing)
 

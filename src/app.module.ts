@@ -9,6 +9,7 @@ import { Comment } from './comments/comment.entity';
 import { AuditLog } from './audit-logs/audit-log.entity';
 import { TicketDependency } from './tickets/ticket-dependency.entity';
 import { UsersModule } from './users/users.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from './users/users.module';
       synchronize: true,
     }),
     UsersModule,
+    ProjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
