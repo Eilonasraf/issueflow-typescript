@@ -151,3 +151,23 @@ This was the first vertical API slice after completing the database layer, provi
 
 **Reasoning:**
 Projects was the right next slice because it depends only on users and is itself a dependency for tickets. It also introduced the soft-delete pattern the assignment requires for projects and tickets, in an isolated, verifiable way.
+
+## Tickets CRUD Vertical Slice
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Implement basic Ticket CRUD as a vertical slice, deliberately excluding the status state machine.
+
+**Prompt:**
+> Implement the Tickets basic CRUD vertical slice only. Add the tickets module, service, controller, and DTOs. Add dueDate, isOverdue, and a deleted_at soft-delete column to the Ticket entity, and hide deletedAt from responses. Implement the README Tickets endpoints (GET by project, GET by id, POST, PATCH, DELETE) with soft delete and DTO validation. Validate that projectId exists and assigneeId exists when provided. Do not add the ticket state-machine rules, dependencies logic, audit logs, comments, auth, auto-assignment, CSV, attachments, or scheduler yet.
+
+**Outcome:**
+- Added Tickets module, controller, service, and create/update DTOs.
+- Extended the Ticket entity with `dueDate`, `isOverdue`, and a `deleted_at` soft-delete column.
+- Implemented CRUD with soft delete; GET endpoints exclude soft-deleted tickets.
+- Validated `projectId` and optional `assigneeId` against existing records (clear 400s).
+- Verified the positive flow, negative cases (400/404), DB retention of soft-deleted rows with `deleted_at` set, and that `deletedAt` does not leak in responses.
+
+**Reasoning:**
+Keeping CRUD separate from the lifecycle rules made the slice easy to verify on its own. The state machine (forward-only transitions, no edits when DONE, no DONE with unresolved blockers) is intentionally deferred to the next step so the basic create/read/update/delete route is proven first.

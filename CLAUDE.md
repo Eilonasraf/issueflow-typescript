@@ -42,7 +42,9 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Projects** slice done — `ProjectsModule` (controller + service + `create-project`/`update-project` DTOs) wired into `AppModule`, implementing the README Projects API (GET list/by-id, POST create, PATCH `:projectId`, DELETE `:projectId`). DELETE is **soft delete**: `Project` has `@DeleteDateColumn deletedAt` (marked `@Exclude`), `remove` uses `softRemove`, and the controller uses `ClassSerializerInterceptor` so `deletedAt` never appears in responses. `create` validates `ownerId` references an existing user (400 otherwise). Soft-deleted projects are hidden from GET but retained in the DB.
 
-No auth yet. Other domains (`tickets/`, `comments/`, `audit-logs/`) still have only entities. The ADMIN-only `/projects/deleted` and `/projects/:id/restore` endpoints are not built (need auth). Next group: Tickets.
+**Tickets** slice done (basic CRUD) — `TicketsModule` (controller + service + `create-ticket`/`update-ticket` DTOs) wired into `AppModule`, implementing the README Tickets API (`GET /tickets?projectId=`, GET by id, POST, PATCH, DELETE). The `Ticket` entity gained `dueDate` (nullable timestamptz), `isOverdue` (bool default false), and `deletedAt` (`@DeleteDateColumn` + `@Exclude`). DELETE is soft delete (`softRemove`); GET hides soft-deleted rows; `dueDate`/`isOverdue` are visible in responses, `deletedAt` is not. `create` validates `projectId` exists and `assigneeId` if provided. **No state-machine enforcement yet** — status updates accept any valid enum; the forward-only lifecycle (no edits when DONE, no DONE with unresolved blockers) is the next step.
+
+No auth yet. `comments/` and `audit-logs/` still have only entities. ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`) not built (need auth). Next: ticket state machine.
 
 ## Deliverables (still missing)
 

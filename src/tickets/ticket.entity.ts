@@ -1,5 +1,7 @@
+import { Exclude } from 'class-transformer';
 import {
   Column,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -44,4 +46,14 @@ export class Ticket {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'assignee_id' })
   assignee: User | null;
+
+  @Column({ name: 'due_date', type: 'timestamptz', nullable: true })
+  dueDate: Date | null;
+
+  @Column({ name: 'is_overdue', default: false })
+  isOverdue: boolean;
+
+  @Exclude()
+  @DeleteDateColumn({ name: 'deleted_at' })
+  deletedAt: Date | null;
 }
