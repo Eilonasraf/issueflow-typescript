@@ -189,3 +189,22 @@ Keeping CRUD separate from the lifecycle rules made the slice easy to verify on 
 
 **Reasoning:**
 Putting the lifecycle rules in their own service keeps `TicketsService` focused on persistence and makes the rules independently testable. Using strict single-step transitions (not arbitrary forward jumps) matches the assignment's lifecycle and makes invalid jumps like TODO -> DONE fail explicitly.
+
+## Ticket Dependencies API
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Expose the ticket dependency endpoints so the blocker rule is usable and testable through the public API instead of manual SQL.
+
+**Prompt:**
+> Implement the ticket dependencies API only. Add a TicketDependenciesService, a controller for POST/GET/DELETE under /tickets/:ticketId/dependencies, and a CreateDependencyDto. Validate that both tickets exist, that they belong to the same project, prevent duplicate dependencies, and prevent a ticket from depending on itself. GET should return the blocker tickets as id/title/status. Do not add auth, audit, comments, mentions, attachments, scheduler, auto-assignment, CSV, or cycle detection.
+
+**Outcome:**
+- Added `TicketDependenciesService` and `TicketDependenciesController` (`tickets/:ticketId/dependencies`) plus `CreateDependencyDto`, registered in `TicketsModule`.
+- Implemented add/list/remove with validations: path ticket missing -> 404, unknown blocker -> 400, cross-project -> 400, duplicate -> 409, self-dependency -> 400.
+- GET returns blockers as `{id, title, status}`.
+- Verified the full flow with curl, including re-running the state-machine blocker rule through the real API: adding a dependency blocks `-> DONE` (400), and removing it via DELETE allows `-> DONE` (200).
+
+**Reasoning:**
+This completed the dependency feature so the Step 6 blocker rule is driven by real API data rather than hand-inserted rows, which makes the lifecycle behavior verifiable end-to-end.

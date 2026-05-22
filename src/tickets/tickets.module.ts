@@ -6,13 +6,15 @@ import { Project } from '../projects/project.entity';
 import { User } from '../users/user.entity';
 import { TicketsService } from './tickets.service';
 import { TicketStateService } from './ticket-state.service';
+import { TicketDependenciesService } from './ticket-dependencies.service';
 import { TicketsController } from './tickets.controller';
+import { TicketDependenciesController } from './ticket-dependencies.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Ticket, Project, User, TicketDependency]),
   ],
-  controllers: [TicketsController],
-  providers: [TicketsService, TicketStateService],
+  controllers: [TicketsController, TicketDependenciesController],
+  providers: [TicketsService, TicketStateService, TicketDependenciesService],
 })
 export class TicketsModule {}

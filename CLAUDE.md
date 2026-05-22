@@ -46,7 +46,9 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Ticket state machine** enforced (Step 6) — `TicketStateService` (`src/tickets/ticket-state.service.ts`), consulted by `TicketsService.update`: strict single-step forward transitions only (`TODO→IN_PROGRESS→IN_REVIEW→DONE`; forward jumps and backward moves → 400), no edits once a ticket is `DONE` (any update → 400), and `→DONE` blocked when any `TicketDependency.blockedBy` ticket isn't `DONE` (400). Dependency rows are read-only here — there's still no API to *create* them. Lifecycle applies to updates only; `POST /tickets` may still create a ticket in any status.
 
-No auth yet. `comments/` and `audit-logs/` still have only entities. Dependency-creation endpoints and ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`) not built. 
+**Ticket dependencies API** (Step 7) — `TicketDependenciesController` (`tickets/:ticketId/dependencies`) + `TicketDependenciesService`, registered in `TicketsModule`. `POST` (`{blockedBy}`), `GET` (returns blocker tickets as `{id, title, status}`), `DELETE :blockerId`. Validates both tickets exist (path ticket 404, bad `blockedBy` 400), same project (400), no duplicate (409), and no self-dependency (400). The Step 6 blocker rule is now exercisable through the API (no manual SQL). No transitive cycle detection (only direct self-block).
+
+No auth yet. `comments/` and `audit-logs/` still have only entities. ADMIN-only soft-delete management endpoints (`/projects|tickets/deleted`, `/restore`) not built. 
 
 ## Deliverables (still missing)
 
