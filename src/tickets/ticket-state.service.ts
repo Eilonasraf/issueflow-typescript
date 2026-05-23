@@ -44,7 +44,9 @@ export class TicketStateService {
       relations: ['blockedBy'],
     });
     const openBlockers = deps
-      .filter((dep) => dep.blockedBy && dep.blockedBy.status !== TicketStatus.DONE)
+      .filter(
+        (dep) => dep.blockedBy && dep.blockedBy.status !== TicketStatus.DONE,
+      )
       .map((dep) => dep.blockedById);
     if (openBlockers.length > 0) {
       throw new BadRequestException(

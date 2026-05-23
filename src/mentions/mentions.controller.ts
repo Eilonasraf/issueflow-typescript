@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { MentionsPage, MentionsService } from './mentions.service';
 import { MentionsQueryDto } from './dto/mentions-query.dto';
 

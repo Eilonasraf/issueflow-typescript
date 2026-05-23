@@ -33,7 +33,10 @@ export class AuthService {
     const user = await this.userRepo.findOne({
       where: { username: dto.username },
     });
-    if (!user || !this.passwordService.verify(dto.password, user.passwordHash)) {
+    if (
+      !user ||
+      !this.passwordService.verify(dto.password, user.passwordHash)
+    ) {
       throw new UnauthorizedException('Invalid credentials');
     }
     const accessToken = this.jwtService.sign({

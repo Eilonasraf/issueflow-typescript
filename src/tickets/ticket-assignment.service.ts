@@ -61,8 +61,7 @@ export class TicketAssignmentService {
       })),
     );
     rows.sort(
-      (a, b) =>
-        a.openTicketCount - b.openTicketCount || a.userId - b.userId,
+      (a, b) => a.openTicketCount - b.openTicketCount || a.userId - b.userId,
     );
     return rows;
   }

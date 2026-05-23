@@ -68,7 +68,9 @@ export class TicketCsvService {
         skip_empty_lines: true,
       });
     } catch (err: any) {
-      throw new BadRequestException(`Invalid CSV: ${err?.message ?? 'parse error'}`);
+      throw new BadRequestException(
+        `Invalid CSV: ${err?.message ?? 'parse error'}`,
+      );
     }
     let created = 0;
     let failed = 0;
@@ -121,8 +123,6 @@ export class TicketCsvService {
   private flattenValidationErrors(
     errors: import('class-validator').ValidationError[],
   ): string {
-    return errors
-      .flatMap((e) => Object.values(e.constraints ?? {}))
-      .join('; ');
+    return errors.flatMap((e) => Object.values(e.constraints ?? {})).join('; ');
   }
 }

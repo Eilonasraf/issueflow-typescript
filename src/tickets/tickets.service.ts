@@ -58,8 +58,7 @@ export class TicketsService {
     const requestedAssignee = dto.assigneeId ?? null;
     const effectiveAssignee =
       requestedAssignee ?? (await this.assignment.autoAssign(dto.projectId));
-    const autoAssigned =
-      requestedAssignee == null && effectiveAssignee != null;
+    const autoAssigned = requestedAssignee == null && effectiveAssignee != null;
     const ticket = await this.ticketRepo.save(
       this.ticketRepo.create({
         ...dto,
