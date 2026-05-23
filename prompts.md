@@ -9,7 +9,7 @@ This file contains the main and relevant AI prompts, commands, and tool interact
 - Design tool: Figma MCP, used to create an architecture/design diagram
 - Plan reviewer: OpenAI Codex (ChatGPT) — each per-step plan written by Claude Code was reviewed with Codex before it was approved and implemented, ensuring the Plan → Review → Approve → Implement workflow had a second AI perspective at the plan stage.
 - Human responsibility: I reviewed, tested, and validated the generated code locally before continuing between implementation slices.
-- Submission artifacts (§4.5): the committed instruction files are `CLAUDE.md`, this `prompts.md`, `run.md`, and `README.md`. No `.mcp.json`, `.claude/skills/`, or other agent-configuration files were created — only standard Claude Code instruction files that were actually used during the project are included.
+- Submission artifacts (§4.5): the committed AI/instruction-related artifacts are `CLAUDE.md` and this `prompts.md`; the supporting submission docs are `run.md` and the original `README.md`. No `.mcp.json`, `.claude/skills/`, or other agent-configuration files were created — only standard Claude Code instruction files that were actually used during the project are included.
 
 ## Project Initialization with Claude Code
 
