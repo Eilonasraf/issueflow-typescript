@@ -393,10 +393,16 @@ Local disk + DB-row metadata is the simplest correct implementation for this ass
 > Add backend tests only. Unit specs for PasswordService, TicketStateService, TicketAssignmentService, TicketEscalationService — instantiate the services directly with hand-rolled mocked repos (no @nestjs/testing module needed). One e2e spec that covers: protected route without token returns 401; create user -> login -> create project -> create ticket; DEVELOPER token returns 403 on /projects/deleted. Use unique usernames per test run to avoid DB collisions. No new dependencies.
 
 **Outcome:**
-- Added 4 unit specs (27 tests passing) and 1 e2e spec (3 tests passing) on top of the skeleton tests. Final counts: 5 unit suites / 27 tests; 2 e2e suites / 4 tests.
+- Added 4 unit specs (27 tests passing) and 1 e2e spec (3 tests passing) on top of the skeleton tests. Counts at the end of this step: 5 unit suites / 27 tests; 2 e2e suites / 4 tests. (A later step added `test/concurrency.e2e-spec.ts` for optimistic locking, bringing the final repo total to **5 unit suites / 27 tests; 3 e2e suites / 6 tests**.)
 - Unit specs use hand-rolled `jest.fn()` mocks for the TypeORM repos — no `@nestjs/testing` overhead — and assert behavior, not implementation (e.g. counts of `save`/`audit.record` calls).
 - E2E boots `AppModule` via `Test.createTestingModule`, applies the same global `ValidationPipe` as `main.ts`, and uses Supertest against `app.getHttpServer()`; `afterAll` closes the app.
 - Verified: `npm run build`, `npm test`, `npm run test:e2e`, `npm run lint` all green; lint `--fix` only normalized whitespace in the new spec files.
 
 **Reasoning:**
-The four picked services are the project's behavior hot-spots — password hashing, the state machine, auto-assignment, and escalation — and they're all pure enough to test with simple mocks, so the unit suite stays fast and deterministic. One e2e flow that exercises the full HTTP stack (Validation → JWT guard → role guard → service → DB) gives end-to-end confidence without duplicating coverage that's already proven by curl in the per-step verifications.
+The testing strategy is not "we test everything." It is:
+
+1. **We test the highest-risk business rules with unit tests.** Pure-logic hot-spots — password hashing, the state machine, auto-assignment, escalation — are isolated with hand-rolled `jest.fn()` mocks so the suite stays fast (~1s) and deterministic. These are the rules where a regression would silently corrupt data or break assignment guarantees.
+2. **We test the most important full-app wiring with e2e tests.** The auth flow (401 without token → bootstrap → 403 for wrong role) proves the global `ValidationPipe` + `JwtAuthGuard` + `RolesGuard` are actually wired up, not just unit-correct. The optimistic-locking e2e proves the `version`-conflict path returns 409 over real HTTP against real Postgres.
+3. **We manually verified the remaining endpoint-specific flows during implementation.** Every per-step commit was curl-verified before being marked done (CRUD shapes, soft-delete + restore, dependency cycle rejection, CSV import/export, mentions, attachment upload, etc.). That coverage lives in the per-step blocks of this file, not in an automated test, so the test suite doesn't need to duplicate it.
+
+The four unit-tested services are pure enough to test with simple mocks, so the unit suite stays fast and deterministic. The two e2e flows that exercise the full HTTP stack (Validation → JWT guard → role guard → service → DB, and version-conflict over real HTTP) give end-to-end confidence on the seams without duplicating coverage that's already proven by curl in the per-step verifications.
