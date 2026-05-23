@@ -68,7 +68,7 @@ Feature-complete backend:
 Non-obvious gotchas:
 - **Public routes:** `GET /`, `POST /auth/login`, `POST /users` (registration/bootstrap). Everything else is JWT-protected.
 - **Documented assumption:** auto-assign and the workload endpoint use *all* `DEVELOPER` users globally (no `project_members` table).
-- **JWT secret** is hardcoded in `src/auth/auth.module.ts` — local dev only; move to env for any real deployment.
+- **JWT secret** is read from the `JWT_SECRET` env var in `src/auth/auth.module.ts`, with a built-in dev fallback (`'dev-secret-change-me'`) so local runs and tests work out of the box. Set `JWT_SECRET` explicitly before any real deployment.
 - **Concurrency control:** `PATCH /tickets/:id` and `PATCH /tickets/:ticketId/comments/:commentId` require `version` (integer) in the body. Use the `version` value from the latest GET/PATCH response — the server returns 409 with `"… modified by another user (current version X, you sent Y). Refetch and retry."` if the version is stale. `version` is included in ticket and comment GET/PATCH/POST responses for this reason; it isn't in the README contract but is needed for clients to update safely.
 
 See `README.md` for the API contract, `run.md` for setup/run/test instructions, and `prompts.md` for the AI usage log and per-step decisions.

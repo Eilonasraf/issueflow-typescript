@@ -13,7 +13,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
   imports: [
     TypeOrmModule.forFeature([User]),
     JwtModule.register({
-      secret: 'dev-secret-change-me',
+      secret: process.env.JWT_SECRET ?? 'dev-secret-change-me',
       signOptions: { expiresIn: 3600 },
     }),
   ],

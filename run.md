@@ -47,7 +47,9 @@ npm run test:e2e      # end-to-end tests
 
 All endpoints require a JWT **except** `POST /auth/login` and `POST /users`. `POST /users` is intentionally public so the first user can be created (bootstrap/registration) — every other route, including the rest of `/users`, requires a valid token.
 
-> Security note: the JWT secret is **hardcoded for local development only** (`src/auth/auth.module.ts`). Move it to an environment variable before any real deployment.
+> Security note: the JWT secret is read from the `JWT_SECRET` environment variable (`src/auth/auth.module.ts`). If `JWT_SECRET` is not set, the app falls back to a built-in dev string — convenient for local development and tests, but **set `JWT_SECRET` explicitly before any real deployment**.
+>
+> Example: `JWT_SECRET=<your-secret> npm run start:prod`
 
 **Flow:**
 1. Create a user (public), including a password:
