@@ -7,6 +7,7 @@ import { Project } from './projects/project.entity';
 import { Ticket } from './tickets/ticket.entity';
 import { Comment } from './comments/comment.entity';
 import { CommentMention } from './comments/comment-mention.entity';
+import { Attachment } from './attachments/attachment.entity';
 import { AuditLog } from './audit-logs/audit-log.entity';
 import { TicketDependency } from './tickets/ticket-dependency.entity';
 import { UsersModule } from './users/users.module';
@@ -16,6 +17,7 @@ import { CommentsModule } from './comments/comments.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { MentionsModule } from './mentions/mentions.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 
 @Module({
   imports: [
@@ -34,6 +36,7 @@ import { MentionsModule } from './mentions/mentions.module';
         AuditLog,
         TicketDependency,
         CommentMention,
+        Attachment,
       ],
       synchronize: true,
     }),
@@ -44,6 +47,7 @@ import { MentionsModule } from './mentions/mentions.module';
     TicketsModule,
     CommentsModule,
     MentionsModule,
+    AttachmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

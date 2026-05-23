@@ -361,3 +361,21 @@ A pure `runEscalation()` keeps the rule logic free of time-based side effects an
 
 **Reasoning:**
 Reusing `TicketsService.create()` per row makes the import behave like batched single creates — no parallel "import-only" validation path to drift from the manual one. Per-row validation with `plainToInstance` + class-validator mirrors the global `ValidationPipe`, so the same DTO rules apply without rebuilding them. Keeping the literal `/tickets/export` and `/tickets/import` paths on a controller registered before the `:ticketId`-style routes is the same precaution used for `/tickets/escalate` in Step 14.
+
+## Attachments
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Implement Step 16 attachments (last feature slice): per-ticket file upload + delete, with 10 MB / allowed-mime constraints, local-disk storage, and per-action audit.
+
+**Prompt:**
+> Implement attachments only. Add an Attachment entity (id/ticketId/filename/storagePath/contentType/size/createdAt; ON DELETE CASCADE from tickets), AttachmentsModule, AttachmentsService, and AttachmentsController for POST /tickets/:ticketId/attachments and DELETE /tickets/:ticketId/attachments/:attachmentId. Store files in local uploads/, gitignored, with UUID filenames preserving the original name in DB. Enforce 10 MB and allowed mime types image/png, image/jpeg, application/pdf, text/plain via multer's limits + fileFilter. Response shape exactly {id, ticketId, filename, contentType} — no storagePath. Audit each action as UPDATE/TICKET with the authenticated user. JWT-protected, no role gate. Cleanup discipline: unlink on save failure; on delete, DB row first then file. No new dependencies, no other features.
+
+**Outcome:**
+- Added `Attachment` entity + `AttachmentsModule/Service/Controller`. Registered the entity in `AppModule` and added `/uploads` to `.gitignore`.
+- Verified end-to-end: upload returns the README shape (`{id, ticketId, filename, contentType}`) and a file appears in `uploads/`; the response **never** includes `storagePath`. Bad mime → 400; oversize → 413; unknown ticket → 404; no token → 401; missing file → 400. Delete removes the DB row and unlinks the file; deleting an unknown attachment → 404. Audit `UPDATE/TICKET` rows recorded for both upload and delete.
+- No new npm dependencies; multer was already in the project.
+
+**Reasoning:**
+Local disk + DB-row metadata is the simplest correct implementation for this assignment, and using multer's `limits` + `fileFilter` keeps validation declarative (no manual size loops). Keeping `storagePath` out of API responses minimizes information leakage. Auditing as `UPDATE/TICKET` mirrors how `TicketDependencies` audits sub-resource changes (no new enum value introduced). The unlink-on-failure path keeps disk and DB in sync even when persistence throws.
