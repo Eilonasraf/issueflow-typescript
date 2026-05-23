@@ -7,13 +7,13 @@ This file contains the main and relevant AI prompts, commands, and tool interact
 - Primary implementation agent: Claude Code with Claude Opus 4.7
 - Claude Code setup command: `/init`, used to generate repository-level guidance in `CLAUDE.md`
 - Design tool: Figma MCP, used to create an architecture/design diagram
-- Secondary reviewer: OpenAI Codex, used to review design and implementation decisions
+- Plan reviewer: OpenAI Codex (ChatGPT) — each per-step plan written by Claude Code was reviewed with Codex before it was approved and implemented, ensuring the Plan → Review → Approve → Implement workflow had a second AI perspective at the plan stage.
 - Human responsibility: I reviewed, tested, and validated the generated code locally before continuing between implementation slices.
 
 ## Project Initialization with Claude Code
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7  
+**Model:** Claude Opus 4.7 + Codex plan review  
 **Command Used:** `/init`
 
 **Goal:** Initialize the agent with repository-level context before implementation.
@@ -41,7 +41,7 @@ Claude generated `CLAUDE.md`, which summarized:
 ## Architecture Design with Figma MCP
 
 **Tool:** Claude Code with Figma MCP  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Create an initial architecture/design diagram before implementation, to clarify the planned backend structure and the main system layers.
 
@@ -58,7 +58,7 @@ Claude generated `CLAUDE.md`, which summarized:
 ## Building the Initial Database Foundation
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Stand up the persistence layer first — prove the NestJS app boots, PostgreSQL connects, and TypeORM creates the core tables — before writing any API code.
 
@@ -90,7 +90,7 @@ early rather than mid-feature.
 ## Completing the Core Database Layer
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Complete the core persistence model before moving to API endpoints, while keeping the scope limited to database entities only.
 
@@ -116,7 +116,7 @@ This completed the main database layer while avoiding unnecessary scope expansio
 ## Users API Vertical Slice
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement the first complete API flow using the Users API.
 
@@ -135,7 +135,7 @@ This was the first vertical API slice after completing the database layer, provi
 ## Projects API Vertical Slice
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement the README Projects API as the second vertical slice, including the required soft-delete behavior.
 
@@ -155,7 +155,7 @@ Projects was the right next slice because it depends only on users and is itself
 ## Tickets CRUD Vertical Slice
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement basic Ticket CRUD as a vertical slice, deliberately excluding the status state machine.
 
@@ -175,7 +175,7 @@ Keeping CRUD separate from the lifecycle rules made the slice easy to verify on 
 ## Ticket State Machine
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Add the ticket lifecycle business rules on top of the CRUD slice, isolated in a dedicated service.
 
@@ -193,7 +193,7 @@ Putting the lifecycle rules in their own service keeps `TicketsService` focused 
 ## Ticket Dependencies API
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Expose the ticket dependency endpoints so the blocker rule is usable and testable through the public API instead of manual SQL.
 
@@ -212,7 +212,7 @@ This completed the dependency feature so the Step 6 blocker rule is driven by re
 ## Comments API
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement the comments API as a vertical slice, deferring mention parsing to a later step.
 
@@ -231,7 +231,7 @@ Keeping the comment response shape aligned with the README now (including a stub
 ## Auth / JWT
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Add JWT authentication and protect the API, including the password field the User entity was missing.
 
@@ -251,7 +251,7 @@ A global guard plus a small `@Public()` allow-list means "protect everything" is
 ## Audit Logging
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Record every state-changing action with the real authenticated user, now that JWT auth exists.
 
@@ -269,7 +269,7 @@ Explicit `actorId` threading keeps the audit trail transparent and debuggable (c
 ## Soft-Delete Admin Endpoints
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Complete the soft-delete feature with ADMIN-only list/restore endpoints, now that auth and audit exist.
 
@@ -288,7 +288,7 @@ A reusable guard + decorator keeps role enforcement declarative and ready for an
 ## @Mentions
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Replace the `mentionedUsers: []` stub left in Step 8 with real `@username` parsing/persistence, and add the per-user mentions endpoint.
 
@@ -308,7 +308,7 @@ A small join entity keeps the relationship explicit and queryable, and centraliz
 ## Auto-Assignment + Workload
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement the least-loaded-DEVELOPER auto-assignment on ticket creation, the `GET /projects/:projectId/workload` endpoint, and the `AUTO_ASSIGN` audit, with the documented assumption that the candidate pool is all DEVELOPER users globally (no project-membership table).
 
@@ -327,7 +327,7 @@ A dedicated `TicketAssignmentService` keeps the auto-assign logic and the worklo
 ## Auto-Escalation
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement the §3.7 auto-escalation behavior with a deterministic, callable core (no always-running scheduler) plus an ADMIN trigger endpoint, and the manual-priority-change reset.
 
@@ -347,7 +347,7 @@ A pure `runEscalation()` keeps the rule logic free of time-based side effects an
 ## CSV Export / Import
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement bulk ticket export and import using the already-installed csv-parse / csv-stringify / multer, with import reusing the single-ticket create path so validation, auto-assign, and audit stay consistent.
 
@@ -365,7 +365,7 @@ Reusing `TicketsService.create()` per row makes the import behave like batched s
 ## Attachments
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Implement Step 16 attachments (last feature slice): per-ticket file upload + delete, with 10 MB / allowed-mime constraints, local-disk storage, and per-action audit.
 
@@ -383,7 +383,7 @@ Local disk + DB-row metadata is the simplest correct implementation for this ass
 ## Backend Tests
 
 **Tool:** Claude Code  
-**Model:** Claude Opus 4.7
+**Model:** Claude Opus 4.7 + Codex plan review
 
 **Goal:** Add focused backend tests for the core business services and one e2e flow, using only the existing Jest + Supertest stack — no new test dependencies, no Playwright.
 
