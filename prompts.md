@@ -304,3 +304,22 @@ A reusable guard + decorator keeps role enforcement declarative and ready for an
 
 **Reasoning:**
 A small join entity keeps the relationship explicit and queryable, and centralizing parsing/sync in `MentionsService` means future producers (e.g. system-generated comments) can reuse it without duplicating regex logic. Re-evaluating mentions on every update is simpler and correct (drop + reinsert) — no edge cases around partial updates. The dedicated `MentionsModule` avoids dragging `CommentsModule` into a circular dependency.
+
+## Auto-Assignment + Workload
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Implement the least-loaded-DEVELOPER auto-assignment on ticket creation, the `GET /projects/:projectId/workload` endpoint, and the `AUTO_ASSIGN` audit, with the documented assumption that the candidate pool is all DEVELOPER users globally (no project-membership table).
+
+**Prompt:**
+> Implement Auto-assignment + Workload only. Add TicketAssignmentService with autoAssign(projectId) and workload(projectId), and a WorkloadController for GET /projects/:projectId/workload. Candidate pool = all users with role DEVELOPER (document this assumption). Tie-break by user.id ASC (= registration order). Open-ticket count = non-DONE, non-soft-deleted tickets in the project. In TicketsService.create, when assigneeId is missing, auto-assign and write an additional AUTO_ASSIGN audit row (actor=SYSTEM, performedBy=null). No error when no developer exists — leave unassigned. Validate that an explicit assigneeId (POST or PATCH) is a DEVELOPER — return 400 otherwise. Not triggered on update. Do not add other features.
+
+**Outcome:**
+- Added `TicketAssignmentService` and `WorkloadController`; registered them in `TicketsModule`.
+- Wired auto-assignment into `TicketsService.create`; an `AUTO_ASSIGN` audit row is written only when assignment actually happens.
+- Tightened `assertAssigneeExists` to reject non-DEVELOPER `assigneeId` with 400 (applies to POST and PATCH).
+- Verified end-to-end (using the live workload to predict expected assignees against the existing DEVELOPER pool): t1 auto-assigned to the lowest-id DEVELOPER; t2 to the next lowest 0-count dev; explicit t3 honored, no AUTO_ASSIGN row for t3; ADMIN as `assigneeId` → 400 on both POST and PATCH; `workload` returns sorted rows for every DEVELOPER, 404 on unknown project, 401 without token; AUTO_ASSIGN rows carry `actor: SYSTEM, performedBy: null`; after t1 → DONE, the assignee's open count drops (DONE excluded).
+
+**Reasoning:**
+A dedicated `TicketAssignmentService` keeps the auto-assign logic and the workload aggregation in one place, both consuming the same DEVELOPER pool — so the endpoint reflects exactly what `autoAssign` sees. Restricting explicit `assigneeId` to DEVELOPER mirrors the auto-assign rule and prevents drift between manual and automatic paths. No update-side auto-assign keeps the behavior predictable per the requirements.

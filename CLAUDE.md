@@ -60,7 +60,11 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **@Mentions** (Step 12) — `MentionsModule` (`src/mentions/`) + `CommentMention` entity (`comment_mentions` table, unique `(comment_id, user_id)`, `ON DELETE CASCADE` from `comments`). `MentionsService` parses `@username` from `comment.content` with `/@([A-Za-z0-9_]+)/g`, matches users **case-insensitively**, ignores unknown handles, and re-syncs mentions on comment update (delete + reinsert). `mentionedUsers` is now populated on every comment response with `{id, username, fullName}` (no `passwordHash` leak — explicit mapping). New endpoint `GET /users/:userId/mentions?page=&pageSize=` (JWT-protected, defaults `page=1`/`pageSize=20`/max 100) returns `{ data, total, page }` with comments newest-first. `CommentsModule` imports `MentionsModule`; no circular deps.
 
-Auto-assignment/workload, attachments, CSV, and the escalation scheduler are not built.
+**Auto-assignment + workload** (Step 13) — `TicketAssignmentService` (`src/tickets/ticket-assignment.service.ts`) + `WorkloadController` (`projects/:projectId/workload`). When `POST /tickets` omits `assigneeId`, the service picks the least-loaded DEVELOPER (open ticket = non-DONE, non-soft-deleted, in the same project); tie-break by `user.id ASC` (≡ registration order). No-developer case leaves the ticket unassigned (no error, no AUTO_ASSIGN row). Auto-assigned creations write an **additional** audit row `AUTO_ASSIGN` / `TICKET` with `actor: SYSTEM, performedBy: null` (in addition to the normal `CREATE/TICKET` row). The workload endpoint is JWT-protected, validates the project exists (404), and returns every DEVELOPER (incl. 0-count) sorted by `openTicketCount` ASC then `userId` ASC. **Manual `assigneeId` (POST or PATCH) is now restricted to users with role DEVELOPER** — assigning an ADMIN returns 400. Not triggered on update; PATCH `assigneeId` remains a manual override.
+
+**Assumption (documented):** there's no `project_members` table, so the candidate pool for both auto-assign and the workload endpoint is **all users with `role = DEVELOPER`** globally, not project-scoped membership.
+
+Attachments, CSV, and the escalation scheduler are not built.
 
 ## Deliverables (still missing)
 

@@ -12,10 +12,12 @@ import { TicketStatus } from '../common/enums/ticket-status.enum';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { TicketStateService } from './ticket-state.service';
+import { TicketAssignmentService } from './ticket-assignment.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { AuditAction } from '../common/enums/audit-action.enum';
 import { AuditActor } from '../common/enums/audit-actor.enum';
 import { AuditEntityType } from '../common/enums/audit-entity-type.enum';
+import { UserRole } from '../common/enums/user-role.enum';
 
 @Injectable()
 export class TicketsService {
@@ -28,6 +30,7 @@ export class TicketsService {
     private readonly userRepo: Repository<User>,
     private readonly stateService: TicketStateService,
     private readonly auditLogs: AuditLogsService,
+    private readonly assignment: TicketAssignmentService,
   ) {}
 
   findByProject(projectId: number): Promise<Ticket[]> {
@@ -52,7 +55,17 @@ export class TicketsService {
     if (dto.assigneeId != null) {
       await this.assertAssigneeExists(dto.assigneeId);
     }
-    const ticket = await this.ticketRepo.save(this.ticketRepo.create(dto));
+    const requestedAssignee = dto.assigneeId ?? null;
+    const effectiveAssignee =
+      requestedAssignee ?? (await this.assignment.autoAssign(dto.projectId));
+    const autoAssigned =
+      requestedAssignee == null && effectiveAssignee != null;
+    const ticket = await this.ticketRepo.save(
+      this.ticketRepo.create({
+        ...dto,
+        assigneeId: effectiveAssignee ?? undefined,
+      }),
+    );
     await this.auditLogs.record({
       action: AuditAction.CREATE,
       entityType: AuditEntityType.TICKET,
@@ -60,6 +73,15 @@ export class TicketsService {
       performedBy: actorId,
       actor: AuditActor.USER,
     });
+    if (autoAssigned) {
+      await this.auditLogs.record({
+        action: AuditAction.AUTO_ASSIGN,
+        entityType: AuditEntityType.TICKET,
+        entityId: ticket.id,
+        performedBy: null,
+        actor: AuditActor.SYSTEM,
+      });
+    }
     return ticket;
   }
 
@@ -132,6 +154,11 @@ export class TicketsService {
     const user = await this.userRepo.findOne({ where: { id: assigneeId } });
     if (!user) {
       throw new BadRequestException(`Assignee ${assigneeId} does not exist`);
+    }
+    if (user.role !== UserRole.DEVELOPER) {
+      throw new BadRequestException(
+        `Assignee ${assigneeId} must have role DEVELOPER`,
+      );
     }
   }
 }
