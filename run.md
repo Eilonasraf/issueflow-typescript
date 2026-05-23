@@ -97,3 +97,7 @@ curl -X PATCH http://localhost:3000/tickets/42 \
 ```
 
 See `README.md` for the full API contract.
+
+## Auto-escalation (§3.7)
+
+When the app is running (`npm run start:dev` or `npm run start:prod`), a background scheduler runs every minute and escalates overdue tickets per §3.7: priority is promoted one step at a time (`LOW → MEDIUM → HIGH → CRITICAL`), and once an overdue ticket is already `CRITICAL`, `isOverdue` is set to `true`. The scheduler runs automatically in non-test environments, so no extra command is needed after startup. The ADMIN-only `POST /tickets/escalate` endpoint remains available as a manual/dev verification helper.
