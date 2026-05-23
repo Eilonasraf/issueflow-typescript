@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -90,6 +91,11 @@ export class TicketsService {
     actorId: number,
   ): Promise<Ticket> {
     const ticket = await this.findOne(id);
+    if (ticket.version !== dto.version) {
+      throw new ConflictException(
+        `Ticket ${id} was modified by another user (current version ${ticket.version}, you sent ${dto.version}). Refetch and retry.`,
+      );
+    }
     this.stateService.assertCanUpdate(ticket);
     if (dto.assigneeId != null) {
       await this.assertAssigneeExists(dto.assigneeId);

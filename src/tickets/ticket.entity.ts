@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  VersionColumn,
 } from 'typeorm';
 import { TicketStatus } from '../common/enums/ticket-status.enum';
 import { TicketPriority } from '../common/enums/ticket-priority.enum';
@@ -56,4 +57,7 @@ export class Ticket {
   @Exclude()
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt: Date | null;
+
+  @VersionColumn({ default: 1 })
+  version: number;
 }

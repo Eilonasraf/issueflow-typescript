@@ -5,11 +5,17 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 import { TicketStatus } from '../../common/enums/ticket-status.enum';
 import { TicketPriority } from '../../common/enums/ticket-priority.enum';
 
 export class UpdateTicketDto {
+  /** Current version of the ticket as last seen by the client (optimistic lock). */
+  @IsInt()
+  @Min(1)
+  version: number;
+
   @IsOptional()
   @IsString()
   @IsNotEmpty()

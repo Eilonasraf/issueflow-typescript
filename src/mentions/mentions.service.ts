@@ -16,6 +16,7 @@ export interface MentionedCommentView {
   ticketId: number;
   authorId: number;
   content: string;
+  version: number;
   mentionedUsers: MentionedUserView[];
 }
 
@@ -100,6 +101,7 @@ export class MentionsService {
       ticketId: comment.ticketId,
       authorId: comment.authorId,
       content: comment.content,
+      version: comment.version,
       mentionedUsers: (comment.mentions ?? [])
         .filter((mention) => mention.user)
         .map((mention) => ({

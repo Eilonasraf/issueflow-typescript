@@ -75,4 +75,23 @@ All endpoints require a JWT **except** `POST /auth/login` and `POST /users`. `PO
 
 Passwords are hashed with Node's `crypto.scrypt`; `passwordHash` is never returned in any response.
 
+## Concurrency (optimistic locking)
+
+`PATCH /tickets/:ticketId` and `PATCH /tickets/:ticketId/comments/:commentId` use optimistic locking. The client must include `version` in the request body; on a successful update the server increments it. If the version you send is stale (someone else already updated the row), the server responds `409 Conflict` with `"… modified by another user (current version X, you sent Y). Refetch and retry."`.
+
+The current `version` is included in every ticket and comment GET / POST / PATCH response so clients can read and resend it. Example flow:
+
+```bash
+# 1. read current version
+curl http://localhost:3000/tickets/42 -H "Authorization: Bearer <jwt>"
+# -> { ..., "version": 3 }
+
+# 2. update with that version
+curl -X PATCH http://localhost:3000/tickets/42 \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"version":3,"title":"new title"}'
+# -> 200 OK, server-side version becomes 4
+```
+
 See `README.md` for the full API contract.

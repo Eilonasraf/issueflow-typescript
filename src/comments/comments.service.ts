@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -21,6 +22,7 @@ export interface CommentView {
   ticketId: number;
   authorId: number;
   content: string;
+  version: number;
   mentionedUsers: { id: number; username: string; fullName: string }[];
 }
 
@@ -85,6 +87,11 @@ export class CommentsService {
     actorId: number,
   ): Promise<void> {
     const comment = await this.getCommentOr404(ticketId, commentId);
+    if (comment.version !== dto.version) {
+      throw new ConflictException(
+        `Comment ${commentId} was modified by another user (current version ${comment.version}, you sent ${dto.version}). Refetch and retry.`,
+      );
+    }
     comment.content = dto.content;
     const saved = await this.commentRepo.save(comment);
     await this.mentions.syncForComment(saved.id, saved.content);
@@ -124,6 +131,7 @@ export class CommentsService {
       ticketId: comment.ticketId,
       authorId: comment.authorId,
       content: comment.content,
+      version: comment.version,
       mentionedUsers: users.map((user) => ({
         id: user.id,
         username: user.username,

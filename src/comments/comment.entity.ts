@@ -7,6 +7,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { Ticket } from '../tickets/ticket.entity';
 import { User } from '../users/user.entity';
@@ -42,4 +43,7 @@ export class Comment {
 
   @OneToMany(() => CommentMention, (mention) => mention.comment)
   mentions: CommentMention[];
+
+  @VersionColumn({ default: 1 })
+  version: number;
 }
