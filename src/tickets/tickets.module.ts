@@ -9,10 +9,12 @@ import { TicketStateService } from './ticket-state.service';
 import { TicketDependenciesService } from './ticket-dependencies.service';
 import { TicketAssignmentService } from './ticket-assignment.service';
 import { TicketEscalationService } from './ticket-escalation.service';
+import { TicketCsvService } from './ticket-csv.service';
 import { TicketsController } from './tickets.controller';
 import { TicketDependenciesController } from './ticket-dependencies.controller';
 import { WorkloadController } from './workload.controller';
 import { EscalationController } from './escalation.controller';
+import { CsvController } from './csv.controller';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
@@ -22,6 +24,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
   ],
   controllers: [
     EscalationController,
+    CsvController,
     TicketsController,
     TicketDependenciesController,
     WorkloadController,
@@ -32,6 +35,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
     TicketDependenciesService,
     TicketAssignmentService,
     TicketEscalationService,
+    TicketCsvService,
   ],
 })
 export class TicketsModule {}

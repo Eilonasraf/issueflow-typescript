@@ -343,3 +343,21 @@ A dedicated `TicketAssignmentService` keeps the auto-assign logic and the worklo
 
 **Reasoning:**
 A pure `runEscalation()` keeps the rule logic free of time-based side effects and trivially testable. The ADMIN trigger lets graders exercise the behavior end-to-end without relying on a background tick. Putting the reset-on-priority-change in `update` rather than the escalation service keeps the contract obvious: any manual priority edit erases the previous auto-escalation state, regardless of who runs the next cycle.
+
+## CSV Export / Import
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Implement bulk ticket export and import using the already-installed csv-parse / csv-stringify / multer, with import reusing the single-ticket create path so validation, auto-assign, and audit stay consistent.
+
+**Prompt:**
+> Implement Step 15 CSV only. Add CsvController and TicketCsvService for GET /tickets/export?projectId= and POST /tickets/import (multipart file + projectId form field). Export columns exactly id/title/description/status/priority/type/assigneeId. Import reuses TicketsService.create() per row so auto-assign, DEVELOPER-only assigneeId, and audit all apply. Validate each row with class-validator; capture per-row failures in {created, failed, errors[]}. Form-level projectId overrides CSV cells. Register CsvController before TicketsController to keep /tickets/export from being matched as :ticketId. No attachments, no broader tests, no new deps.
+
+**Outcome:**
+- Added `TicketCsvService` (export + import), `CsvController`, and `ImportTicketsDto`. Registered the controller before `TicketsController` in `TicketsModule`. No new dependencies.
+- Verified end-to-end: export returns `200 text/csv` with the exact README header and RFC-correct comma/quote escaping; import returns the right `{created, failed, errors}` shape with row-level messages for bad enum, missing title, and bad `assigneeId`; blank `assigneeId` is auto-assigned (AUTO_ASSIGN audit row written via the reused `create`); no token → 401; missing/non-numeric/unknown `projectId` → 400; missing file → 400.
+- Documented (here and in CLAUDE.md) that import produces an audit row per successful row, plus AUTO_ASSIGN where applicable.
+
+**Reasoning:**
+Reusing `TicketsService.create()` per row makes the import behave like batched single creates — no parallel "import-only" validation path to drift from the manual one. Per-row validation with `plainToInstance` + class-validator mirrors the global `ValidationPipe`, so the same DTO rules apply without rebuilding them. Keeping the literal `/tickets/export` and `/tickets/import` paths on a controller registered before the `:ticketId`-style routes is the same precaution used for `/tickets/escalate` in Step 14.
