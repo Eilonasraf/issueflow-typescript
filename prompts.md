@@ -379,3 +379,22 @@ Reusing `TicketsService.create()` per row makes the import behave like batched s
 
 **Reasoning:**
 Local disk + DB-row metadata is the simplest correct implementation for this assignment, and using multer's `limits` + `fileFilter` keeps validation declarative (no manual size loops). Keeping `storagePath` out of API responses minimizes information leakage. Auditing as `UPDATE/TICKET` mirrors how `TicketDependencies` audits sub-resource changes (no new enum value introduced). The unlink-on-failure path keeps disk and DB in sync even when persistence throws.
+
+## Backend Tests
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Add focused backend tests for the core business services and one e2e flow, using only the existing Jest + Supertest stack — no new test dependencies, no Playwright.
+
+**Prompt:**
+> Add backend tests only. Unit specs for PasswordService, TicketStateService, TicketAssignmentService, TicketEscalationService — instantiate the services directly with hand-rolled mocked repos (no @nestjs/testing module needed). One e2e spec that covers: protected route without token returns 401; create user -> login -> create project -> create ticket; DEVELOPER token returns 403 on /projects/deleted. Use unique usernames per test run to avoid DB collisions. No new dependencies.
+
+**Outcome:**
+- Added 4 unit specs (27 tests passing) and 1 e2e spec (3 tests passing) on top of the skeleton tests. Final counts: 5 unit suites / 27 tests; 2 e2e suites / 4 tests.
+- Unit specs use hand-rolled `jest.fn()` mocks for the TypeORM repos — no `@nestjs/testing` overhead — and assert behavior, not implementation (e.g. counts of `save`/`audit.record` calls).
+- E2E boots `AppModule` via `Test.createTestingModule`, applies the same global `ValidationPipe` as `main.ts`, and uses Supertest against `app.getHttpServer()`; `afterAll` closes the app.
+- Verified: `npm run build`, `npm test`, `npm run test:e2e`, `npm run lint` all green; lint `--fix` only normalized whitespace in the new spec files.
+
+**Reasoning:**
+The four picked services are the project's behavior hot-spots — password hashing, the state machine, auto-assignment, and escalation — and they're all pure enough to test with simple mocks, so the unit suite stays fast and deterministic. One e2e flow that exercises the full HTTP stack (Validation → JWT guard → role guard → service → DB) gives end-to-end confidence without duplicating coverage that's already proven by curl in the per-step verifications.
