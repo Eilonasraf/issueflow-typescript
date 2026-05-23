@@ -323,3 +323,23 @@ A small join entity keeps the relationship explicit and queryable, and centraliz
 
 **Reasoning:**
 A dedicated `TicketAssignmentService` keeps the auto-assign logic and the workload aggregation in one place, both consuming the same DEVELOPER pool — so the endpoint reflects exactly what `autoAssign` sees. Restricting explicit `assigneeId` to DEVELOPER mirrors the auto-assign rule and prevents drift between manual and automatic paths. No update-side auto-assign keeps the behavior predictable per the requirements.
+
+## Auto-Escalation
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Implement the §3.7 auto-escalation behavior with a deterministic, callable core (no always-running scheduler) plus an ADMIN trigger endpoint, and the manual-priority-change reset.
+
+**Prompt:**
+> Implement auto-escalation only. Add TicketEscalationService.runEscalation(now?: Date) and an ADMIN-only POST /tickets/escalate trigger. One cycle: for each ticket with dueDate < now, not DONE, not soft-deleted — bump priority one level if not CRITICAL; if already CRITICAL and isOverdue=false set isOverdue=true; otherwise idempotent. Audit each change as UPDATE/SYSTEM/performedBy=null. Reset isOverdue=false when a manual PATCH changes priority. No @nestjs/schedule, no new audit enum value, nothing else.
+
+**Outcome:**
+- Added `TicketEscalationService` (pure, deterministic, accepts `now` for testability) and `EscalationController` (`POST /tickets/escalate`, ADMIN-only via `RolesGuard` + `@Roles(UserRole.ADMIN)`).
+- Tightened `TicketsService.update` to set `isOverdue = false` whenever `priority` is changed manually.
+- Registered the new controller and service in `TicketsModule`; `EscalationController` listed before `TicketsController` to keep `/tickets/escalate` literal-matched (no `ParseIntPipe` 400 risk).
+- Verified the full cycle progression on three overdue tickets (LOW/MEDIUM/CRITICAL), idempotency at full settle, untouched DONE / no-dueDate tickets, manual PATCH priority resets `is_overdue`, and `actor:SYSTEM`/`performedBy:null` audit rows.
+- Auth gating: no token → 401, DEVELOPER → 403, ADMIN → 200.
+
+**Reasoning:**
+A pure `runEscalation()` keeps the rule logic free of time-based side effects and trivially testable. The ADMIN trigger lets graders exercise the behavior end-to-end without relying on a background tick. Putting the reset-on-priority-change in `update` rather than the escalation service keeps the contract obvious: any manual priority edit erases the previous auto-escalation state, regardless of who runs the next cycle.

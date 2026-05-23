@@ -101,6 +101,9 @@ export class TicketsService {
         await this.stateService.assertNoOpenBlockers(id);
       }
     }
+    if (dto.priority != null && dto.priority !== ticket.priority) {
+      ticket.isOverdue = false;
+    }
     Object.assign(ticket, dto);
     const saved = await this.ticketRepo.save(ticket);
     await this.auditLogs.record({

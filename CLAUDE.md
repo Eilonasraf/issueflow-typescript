@@ -64,7 +64,9 @@ First HTTP slice done — **Users**: `UsersModule` (controller + service + `crea
 
 **Assumption (documented):** there's no `project_members` table, so the candidate pool for both auto-assign and the workload endpoint is **all users with `role = DEVELOPER`** globally, not project-scoped membership.
 
-Attachments, CSV, and the escalation scheduler are not built.
+**Auto-escalation** (Step 14) — `TicketEscalationService` (`src/tickets/ticket-escalation.service.ts`) + ADMIN-only `POST /tickets/escalate` (`escalation.controller.ts`). One cycle: find tickets with `dueDate < now`, not DONE, not soft-deleted; for each, bump priority one level (LOW→MEDIUM→HIGH→CRITICAL) — if already CRITICAL and `is_overdue=false`, set `is_overdue=true`; once CRITICAL+`is_overdue=true` it's an **idempotent skip**. Each modification audits as `UPDATE`/`TICKET`/`SYSTEM`/`performedBy: null` (no new `ESCALATE` enum value). `PATCH /tickets/:id` with a priority change now resets `is_overdue=false` per requirements §3.7. **No `@nestjs/schedule` / cron is wired** — `runEscalation()` is pure and callable, so production can wrap it in any external scheduler without coupling tests to time. `EscalationController` is registered before `TicketsController` to keep `/tickets/escalate` literal-matched (no `:ticketId` ambiguity).
+
+Attachments and CSV are not built.
 
 ## Deliverables (still missing)
 
