@@ -1,11 +1,18 @@
+import { LessThan, Not } from 'typeorm';
 import { TicketEscalationService } from './ticket-escalation.service';
 import { TicketPriority } from '../common/enums/ticket-priority.enum';
+import { TicketStatus } from '../common/enums/ticket-status.enum';
 import { AuditAction } from '../common/enums/audit-action.enum';
 import { AuditActor } from '../common/enums/audit-actor.enum';
 import { AuditEntityType } from '../common/enums/audit-entity-type.enum';
 
 function build(
-  candidates: { id: number; priority: TicketPriority; isOverdue: boolean }[],
+  candidates: {
+    id: number;
+    priority: TicketPriority;
+    isOverdue: boolean;
+    status?: TicketStatus;
+  }[],
 ) {
   const tickets = {
     find: jest.fn().mockResolvedValue(candidates),
@@ -20,8 +27,27 @@ function build(
 }
 
 describe('TicketEscalationService', () => {
-  it('bumps a non-CRITICAL priority and writes a SYSTEM/UPDATE audit row', async () => {
-    const t = { id: 1, priority: TicketPriority.LOW, isOverdue: false };
+  it('only queries tickets with dueDate < now and status != DONE (skips no-dueDate tickets via SQL NULL semantics)', async () => {
+    const { svc, tickets } = build([]);
+    const now = new Date('2026-05-23T12:00:00Z');
+
+    await svc.runEscalation(now);
+
+    expect(tickets.find).toHaveBeenCalledTimes(1);
+    const call = tickets.find.mock.calls[0][0] as {
+      where: { dueDate: unknown; status: unknown };
+    };
+    expect(call.where.dueDate).toEqual(LessThan(now));
+    expect(call.where.status).toEqual(Not(TicketStatus.DONE));
+  });
+
+  it('bumps a non-CRITICAL priority and writes a SYSTEM/UPDATE audit row; does NOT touch status', async () => {
+    const t = {
+      id: 1,
+      priority: TicketPriority.LOW,
+      isOverdue: false,
+      status: TicketStatus.IN_PROGRESS,
+    };
     const { svc, tickets, auditLogs } = build([t]);
 
     const summary = await svc.runEscalation(new Date());
@@ -29,6 +55,7 @@ describe('TicketEscalationService', () => {
     expect(summary).toEqual({ processed: 1, escalated: 1, markedOverdue: 0 });
     expect(t.priority).toBe(TicketPriority.MEDIUM);
     expect(t.isOverdue).toBe(false);
+    expect(t.status).toBe(TicketStatus.IN_PROGRESS);
     expect(tickets.save).toHaveBeenCalledTimes(1);
     expect(auditLogs.record).toHaveBeenCalledWith({
       action: AuditAction.UPDATE,
@@ -39,14 +66,20 @@ describe('TicketEscalationService', () => {
     });
   });
 
-  it('flips is_overdue=true on a CRITICAL ticket and audits it', async () => {
-    const t = { id: 2, priority: TicketPriority.CRITICAL, isOverdue: false };
+  it('flips is_overdue=true on a CRITICAL ticket and audits it; does NOT touch status', async () => {
+    const t = {
+      id: 2,
+      priority: TicketPriority.CRITICAL,
+      isOverdue: false,
+      status: TicketStatus.IN_REVIEW,
+    };
     const { svc, tickets, auditLogs } = build([t]);
 
     const summary = await svc.runEscalation(new Date());
 
     expect(summary).toEqual({ processed: 1, escalated: 0, markedOverdue: 1 });
     expect(t.isOverdue).toBe(true);
+    expect(t.status).toBe(TicketStatus.IN_REVIEW);
     expect(tickets.save).toHaveBeenCalledTimes(1);
     expect(auditLogs.record).toHaveBeenCalledTimes(1);
   });
