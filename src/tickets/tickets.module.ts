@@ -9,6 +9,7 @@ import { TicketStateService } from './ticket-state.service';
 import { TicketDependenciesService } from './ticket-dependencies.service';
 import { TicketAssignmentService } from './ticket-assignment.service';
 import { TicketEscalationService } from './ticket-escalation.service';
+import { TicketEscalationScheduler } from './ticket-escalation-scheduler.service';
 import { TicketCsvService } from './ticket-csv.service';
 import { TicketsController } from './tickets.controller';
 import { TicketDependenciesController } from './ticket-dependencies.controller';
@@ -35,6 +36,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
     TicketDependenciesService,
     TicketAssignmentService,
     TicketEscalationService,
+    TicketEscalationScheduler,
     TicketCsvService,
   ],
 })

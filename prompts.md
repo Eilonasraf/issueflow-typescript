@@ -344,7 +344,10 @@ A dedicated `TicketAssignmentService` keeps the auto-assign logic and the worklo
 - Auth gating: no token → 401, DEVELOPER → 403, ADMIN → 200.
 
 **Reasoning:**
-A pure `runEscalation()` keeps the rule logic free of time-based side effects and trivially testable. The ADMIN trigger lets graders exercise the behavior end-to-end without relying on a background tick. Putting the reset-on-priority-change in `update` rather than the escalation service keeps the contract obvious: any manual priority edit erases the previous auto-escalation state, regardless of who runs the next cycle.
+A pure `runEscalation()` keeps the rule logic free of time-based side effects and trivially testable. Putting the reset-on-priority-change in `update` rather than the escalation service keeps the contract obvious: any manual priority edit erases the previous auto-escalation state, regardless of who runs the next cycle.
+
+**Update (post-audit — strict §3.7 compliance):**
+The §3.7 wording calls for *automatic* escalation, so a `TicketEscalationScheduler` was added that runs `runEscalation()` on a `@Cron(EVERY_MINUTE)` schedule via `@nestjs/schedule`. This is now the **primary §3.7 implementation** — escalation happens as real automatic backend behavior without any operator action. The scheduler is `NODE_ENV=test`-gated so the e2e suite stays deterministic (the cron is registered but disabled when Jest sets `NODE_ENV=test`); it logs only non-zero cycle summaries; and errors in a cycle are caught/logged so a bad cycle cannot crash the app. The rule logic in `runEscalation()` is unchanged. The ADMIN `POST /tickets/escalate` endpoint remains **only as a manual/dev/testing helper** — useful for verifying behavior on demand without waiting for the next minute boundary, and for graders who want to exercise the path explicitly. It is no longer the primary trigger.
 
 ## CSV Export / Import
 

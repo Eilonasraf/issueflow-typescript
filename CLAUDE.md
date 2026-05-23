@@ -59,7 +59,7 @@ Feature-complete backend:
 - Ticket dependencies + state machine (forward-only, DONE locked, blocker gate)
 - Mentions (`@username` parsed case-insensitively, populated on every comment response)
 - Auto-assignment + workload
-- Auto-escalation (manual trigger via ADMIN `POST /tickets/escalate` — no cron wired)
+- Auto-escalation: `TicketEscalationScheduler` runs `runEscalation()` on a `@Cron(EVERY_MINUTE)` schedule via `@nestjs/schedule` — this is the §3.7 primary implementation. The scheduler is `NODE_ENV=test`-gated so the e2e suite stays deterministic; errors in a cycle are caught/logged so a bad cycle can't crash the app. ADMIN `POST /tickets/escalate` is kept solely as a manual/dev/testing helper for verifying behavior on demand.
 - CSV import/export (import reuses `TicketsService.create()` per row)
 - Attachments (local disk, 10 MB / mime allow-list)
 - **Optimistic locking on Ticket + Comment updates** (TypeORM `@VersionColumn`; client must send the current `version` in `PATCH`; stale version → **409 Conflict**)
