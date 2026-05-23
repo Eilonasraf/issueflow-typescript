@@ -14,6 +14,7 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { AuditAction } from '../common/enums/audit-action.enum';
 import { AuditActor } from '../common/enums/audit-actor.enum';
 import { AuditEntityType } from '../common/enums/audit-entity-type.enum';
+import { MentionsService } from '../mentions/mentions.service';
 
 export interface CommentView {
   id: number;
@@ -33,12 +34,14 @@ export class CommentsService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly auditLogs: AuditLogsService,
+    private readonly mentions: MentionsService,
   ) {}
 
   async findByTicket(ticketId: number): Promise<CommentView[]> {
     await this.getTicketOr404(ticketId);
     const comments = await this.commentRepo.find({
       where: { ticketId },
+      relations: ['mentions', 'mentions.user'],
       order: { createdAt: 'ASC' },
     });
     return comments.map((comment) => this.toView(comment));
@@ -61,6 +64,10 @@ export class CommentsService {
         content: dto.content,
       }),
     );
+    const mentionedUsers = await this.mentions.syncForComment(
+      saved.id,
+      saved.content,
+    );
     await this.auditLogs.record({
       action: AuditAction.CREATE,
       entityType: AuditEntityType.COMMENT,
@@ -68,7 +75,7 @@ export class CommentsService {
       performedBy: actorId,
       actor: AuditActor.USER,
     });
-    return this.toView(saved);
+    return this.toView(saved, mentionedUsers);
   }
 
   async update(
@@ -79,7 +86,8 @@ export class CommentsService {
   ): Promise<void> {
     const comment = await this.getCommentOr404(ticketId, commentId);
     comment.content = dto.content;
-    await this.commentRepo.save(comment);
+    const saved = await this.commentRepo.save(comment);
+    await this.mentions.syncForComment(saved.id, saved.content);
     await this.auditLogs.record({
       action: AuditAction.UPDATE,
       entityType: AuditEntityType.COMMENT,
@@ -105,14 +113,22 @@ export class CommentsService {
     });
   }
 
-  private toView(comment: Comment): CommentView {
+  private toView(comment: Comment, mentionedUsers?: User[]): CommentView {
+    const users =
+      mentionedUsers ??
+      (comment.mentions ?? [])
+        .map((mention) => mention.user)
+        .filter((user): user is User => !!user);
     return {
       id: comment.id,
       ticketId: comment.ticketId,
       authorId: comment.authorId,
       content: comment.content,
-      // TODO(mentions slice): parse @username from content and return real mentionedUsers
-      mentionedUsers: [],
+      mentionedUsers: users.map((user) => ({
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+      })),
     };
   }
 

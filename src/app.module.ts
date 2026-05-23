@@ -6,6 +6,7 @@ import { User } from './users/user.entity';
 import { Project } from './projects/project.entity';
 import { Ticket } from './tickets/ticket.entity';
 import { Comment } from './comments/comment.entity';
+import { CommentMention } from './comments/comment-mention.entity';
 import { AuditLog } from './audit-logs/audit-log.entity';
 import { TicketDependency } from './tickets/ticket-dependency.entity';
 import { UsersModule } from './users/users.module';
@@ -14,6 +15,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { CommentsModule } from './comments/comments.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { MentionsModule } from './mentions/mentions.module';
 
 @Module({
   imports: [
@@ -24,7 +26,15 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
       username: 'issueflow',
       password: 'issueflow',
       database: 'issueflow_mvp',
-      entities: [User, Project, Ticket, Comment, AuditLog, TicketDependency],
+      entities: [
+        User,
+        Project,
+        Ticket,
+        Comment,
+        AuditLog,
+        TicketDependency,
+        CommentMention,
+      ],
       synchronize: true,
     }),
     AuthModule,
@@ -33,6 +43,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     ProjectsModule,
     TicketsModule,
     CommentsModule,
+    MentionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

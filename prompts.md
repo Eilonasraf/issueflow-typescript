@@ -284,3 +284,23 @@ Explicit `actorId` threading keeps the audit trail transparent and debuggable (c
 
 **Reasoning:**
 A reusable guard + decorator keeps role enforcement declarative and ready for any future ADMIN route, while staying scoped to just these endpoints (no blanket role gating). Reusing TypeORM's `restore()`/`withDeleted` keeps the soft-delete lifecycle consistent with how `softRemove` was implemented earlier.
+
+## @Mentions
+
+**Tool:** Claude Code  
+**Model:** Claude Opus 4.7
+
+**Goal:** Replace the `mentionedUsers: []` stub left in Step 8 with real `@username` parsing/persistence, and add the per-user mentions endpoint.
+
+**Prompt:**
+> Implement the @Mentions slice only. Add a CommentMention join entity (comment_id + user_id, unique, ON DELETE CASCADE) and a MentionsModule with MentionsService + MentionsController for GET /users/:userId/mentions (paginated, newest first). Parse @username from comment content (case-insensitive match against existing usernames; unknown handles ignored). Populate mentionedUsers on every comment response. Re-sync mentions on comment update. No circular module deps — CommentsModule imports MentionsModule; MentionsModule does not import CommentsModule. No notifications, audit changes, or other features.
+
+**Outcome:**
+- Added `CommentMention` entity with cascade delete, registered in `AppModule`.
+- Added `@OneToMany mentions` to `Comment` (metadata only; no schema change to `comments`).
+- Built `MentionsService` (parse + sync + paginated query) and `MentionsController` (`GET /users/:userId/mentions?page=&pageSize=`); `MentionsQueryDto` validates page/pageSize.
+- Wired `MentionsService` into `CommentsService.create` and `update`; `findByTicket` loads `relations: ['mentions', 'mentions.user']`; `toView` projects to `{id, username, fullName}` (no `passwordHash` leak); the TODO marker was removed.
+- Verified end-to-end: case-insensitive match (`@JDoe_*` → `jdoe_*`); unknown `@nobody_*` silently ignored; update re-syncs (removed and re-added); `GET /users/:userId/mentions` returns `{data, total, page}` newest-first with populated `mentionedUsers`; pagination works; JWT-protected (401 without token); DB row exists in `comment_mentions`; deleting the comment cascades the mention row to 0.
+
+**Reasoning:**
+A small join entity keeps the relationship explicit and queryable, and centralizing parsing/sync in `MentionsService` means future producers (e.g. system-generated comments) can reuse it without duplicating regex logic. Re-evaluating mentions on every update is simpler and correct (drop + reinsert) — no edge cases around partial updates. The dedicated `MentionsModule` avoids dragging `CommentsModule` into a circular dependency.
