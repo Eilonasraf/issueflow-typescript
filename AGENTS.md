@@ -17,15 +17,11 @@ I used AI agents as part of the development process, but in a managed way. I did
 
 ## Tools and Skills Used
 
-During the work, I used several AI skills and tools:
+During the work, I used AI-assisted commands, tools, and review workflows:
 
 - `/init` — to help Claude understand and organize the project context.
-- `/goal` — to define clear completion conditions.
-- `/review` — to review implementation and architecture decisions.
-- `/loop` — to repeatedly verify the project against the requirements.
-- `pdfReader` — to inspect and validate the assignment requirements.
-- Figma MCP — to support design thinking.
-- `generate_diagram` — to reason about system structure and relationships.
+- `/goal` — to define clear completion conditions for the final audit.
+- Figma MCP — to support design thinking and create the architecture diagram.
 
 The `/init` skill was especially useful because it helped organize Claude before each work session. This made it easier to return to the project later with the right context already defined.
 
@@ -68,7 +64,7 @@ This helped verify both the internal logic and the real behavior of the REST API
 
 ## Final Verification
 
-Toward the end, I used `/goal` with comprehensive completion conditions and a loop-based review process to check the project again.
+Toward the end, I used `/goal` with comprehensive completion conditions and an iterative review process to check the project again.
 
 The goal was to verify that:
 
